@@ -9,11 +9,12 @@ from os import path, remove
 import requests_html as request
 import html5lib as html
 import PandasExtra as pe
-from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250
+from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other
 from yahoo_finance_api2 import share
-from sklearn.preprocessing import MinMaxScaler,scale
+from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.feature_selection import RFE
 
 def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=None, index_as_date: bool=False,refreshFileOutput: bool=False) ->pd.DataFrame:
 
@@ -178,6 +179,22 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             df = df.dropna()
             to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000,refreshOutput=refresh_data,outputfile=outputfile)
 
+        elif index == 'Other':
+
+            other_tickers = pd.read_csv(filepath_or_buffer =r'c:\users\cosmi\onedrive\desktop\other_tickers.csv')
+            other_tickers.rename(columns={"Symbol":"ticker"},inplace=True)
+            other_tickers = list(other_tickers['ticker'])
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, symbol = ticker) for ticker in other_tickers]
+                return_value = [f.result() for f in futures]
+            df = pd.concat([pd.DataFrame(data=x)for x in return_value],sort=True)
+            df['date'] = pd.to_datetime(df['date'])
+            df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+            df['index'] = 'SPY500'
+            del return_value
+            df = df.dropna()
+            to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000,refreshOutput=refresh_data,outputfile=outputfile)
+
     else:
 
             df = read_csv_bulk(input_file = outputfile,file_size = 1000000000,chunk_count = 100000)
@@ -190,12 +207,12 @@ def get_min_max_scaler(df:pd.DataFrame):
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
     ticker_end_date = dt.date(2019,11,30)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
-    scaler = MinMaxScaler()
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
-    scaler.fit(df_fit[['distanceAboveThirtyDayMVA', 'distanceBelowThirtyDayMVA']])
-    adjusted_values = scaler.transform(df[['distanceAboveThirtyDayMVA', 'distanceBelowThirtyDayMVA']])
-    df['distanceAboveThirtyDayMVAAdjusted'] = adjusted_values[:,0]#return_list[0][0]._values 
-    df['distanceBelowThirtyDayMVAAdjusted'] = adjusted_values[:,1]#return_list[0][1]._values
+    scaler = MinMaxScaler()
+    scaler.fit(df_fit[['distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA']])
+    adjusted_values = scaler.transform(df[['distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA']])
+    df['distanceAboveTwentyDayMVAAdjusted'] = adjusted_values[:,0]#return_list[0][0]._values 
+    df['distanceBelowTwentyDayMVAAdjusted'] = adjusted_values[:,1]#return_list[0][1]._values
     return df
 
 #return the current quote and append it to the price history list
@@ -239,6 +256,7 @@ def get_companies_info(tickers: list,outfile: str=None,refreshFileOutput: bool=F
             companies_info = pd.concat([pd.DataFrame(data=pd.DataFrame(data=x).transpose())for x in return_value])
             companies_info['ticker'] = tickers._values
             companies_info = companies_info[['ticker', 'sector', 'industry']]
+            to_csv_bulk(data=companies_info,df_size=1000000,chunk_count=1000000,refreshOutput=refreshFileOutput,outputfile=outfile)
             return companies_info
 
 def get_company_info_with_exception(ticker:str)->pd.DataFrame:
@@ -253,62 +271,28 @@ def get_company_info_with_exception(ticker:str)->pd.DataFrame:
 
 def getPortfolio(df:pd.DataFrame):
 
-    print(df.loc[df['ticker']=='PAA'].tail)
-    #print(df.shape)
-    #fcx_df = df.loc[df['ticker']=='FCX']
     df_corr = df[['date','ticker','close','index','index_close']]
     df_corr.sort_values(by=['ticker','date'],ascending=['ascending','ascending'],inplace=True)
     df_corr['ticker_pct_change'] = df_corr.groupby(['ticker']).close.pct_change()
     df_corr['index_pct_change'] = df_corr.groupby(['ticker']).index_close.pct_change()
     analysis_df = df_corr.groupby(['ticker'])[['ticker_pct_change', 'index_pct_change']].rolling(50).corr().reset_index([0,1])
-    #print(analysis_df.shape)
-    #print(analysis_df.head(51))
-    #print(df.head(51))
-    #print(df.shape)
-    #fcx_df = analysis_df.loc[analysis_df['ticker']=='FCX']
-    #print(fcx_df.loc[fcx_df['ticker']=='FCX'].tail(50))
-    #analysis_df = analysis_df.loc[analysis_df['index_pct_change'].round(1) != 1]
-    #analysis_df.reset_index(inplace=True)
-    #fcx_df = analysis_df.loc[analysis_df['ticker']=='FCX']
-    #print(fcx_df.loc[fcx_df['ticker']=='FCX'].tail(50))
-    #print(analysis_df.tail(50))
     analysis_df = analysis_df.loc[['ticker_pct_change'],['index_pct_change', 'ticker']]
-    #print(analysis_df.shape)
-    #print(analysis_df.head(51))
     analysis_df.reset_index(inplace=True)
-    #print(analysis_df.shape)
-    #print(analysis_df.head(51))
-    #print(analysis_df.loc[analysis_df['ticker']=='FCX'].head(50))
     analysis_df = analysis_df.loc[analysis_df['index']=='ticker_pct_change']
-    #print(analysis_df.shape)
-    #print(analysis_df.head(51))
     analysis_df.drop(columns=['index'],inplace=True)
-    #print(analysis_df.shape)
-    #print(analysis_df.head(51))
-    #print(analysis_df.loc[analysis_df['ticker']=='FCX'].tail(50))
-    #fcx_df = analysis_df.loc[analysis_df['ticker']=='FCX']
-    #print(fcx_df.loc[fcx_df['ticker']=='FCX'].tail(50))
     df.reset_index(drop=True, inplace=True)
     analysis_df.reset_index(drop=True, inplace=True)
-    #print(df.tail(50))
-    #print(analysis_df.tail(50))
     df['index_pct_change'] = analysis_df['index_pct_change']
-    #print(df.shape)
-    #print(df.head(51))
-    #fcx_df = df[['ticker','index_pct_change', 'rollingSTD', 'index_rolling_std']]
-    #fcx_df = fcx_df.loc[fcx_df['ticker']=='FCX']
-    #print(fcx_df.loc[fcx_df['ticker']=='FCX'].tail(50))
     df['exit_price'] = df['priceTarget'] * 1.05
-    df = df[['ticker','priceTarget','exit_price','sector','industry','close', 'index_pct_change', 'onestandarddeviationmove', 'rollingSTD','index_rolling_std']]
+    df = df[['ticker','priceTarget','exit_price','sector','industry','close', 'index_pct_change', 'oneweekstandarddeviationmove', 'twoweekstandarddeviationmove', 'rollingSTD','index_rolling_std']]
     df.rename(columns={"priceTarget": "entry_price", "index_pct_change": "market_corr"}, inplace = True)
     df['Pct_To_Entry_Price'] = (df['close'] - df['entry_price'] ) / df['entry_price']
     df = getStockBeta(df=df)
-    print(df.loc[df['ticker']=='PAA'].tail(50))
-    #df.drop_duplicates(inplace=True)
     return df
 
 def getStockBeta(df:pd.DataFrame): 
 
+    print(df.tail(50))
     df['beta'] = df['market_corr'] * (df['rollingSTD']/df['index_rolling_std'])
     return df
 
@@ -388,3 +372,142 @@ def read_csv_bulk(input_file: str, file_size:int, chunk_count:int):
         return df
 
     return df
+
+def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) -> pd.DataFrame: 
+    
+    """
+    Keyword arguments:
+    df -- the data frame that is providing the x and y data
+    number_of_days -- the last n days to create the model against
+    resultsDF --the data frame will hold the linear regression model for each security (optional)
+    list_of_Equities -- the list of securities in the df (optional)
+    list_of_Equity_position -- the position in the recurison
+
+    """
+    try:
+
+        best_fit, score, max_date,min_date,equity_DF,days = getLinearModel(df = df, number_of_days = number_of_days, ticker = ticker)
+        linearmodeldf = pd.DataFrame(data =dict(
+                                                  security = ticker,
+                                                  max_date_time = max_date,                           
+                                                  score = score,
+                                                  intercept_ = best_fit.intercept_,
+                                                  coef_0 = best_fit.coef_[0],
+                                                  coef_1 = best_fit.coef_[1],
+                                                  coef_2 = best_fit.coef_[2],
+                                                  coef_3 = best_fit.coef_[3],
+                                                  coef_4 = best_fit.coef_[4],
+                                                  coef_5 = best_fit.coef_[5],
+                                                  coef_6 = best_fit.coef_[6],
+                                                  coef_7 = best_fit.coef_[7],
+                                                  coef_8 = best_fit.coef_[8],
+                                                                    
+                                                 )
+                                                 ,index = [0]
+                                     )
+                            
+    except Exception as e:
+
+          print(e)
+          return
+
+    return linearmodeldf 
+
+def featureSelection(df : pd.DataFrame, ticker : str):
+
+    print('cole')
+    estimator = LinearRegression()
+    selector = RFE(estimator,n_features_to_select = 5, step = 1 )
+    df = df.loc[df['ticker']==ticker].tail(50)
+    print(df.columns)
+    X = df[['high', 'low', 'open', 'volume', 
+       'index_close', 'gold_close',
+       '10_year_note_close',
+       'twentyDayMVA', 'fiftyDayMVA',
+     ]]
+    X.fillna(-99999,inplace=True)
+    y = np.array(df[['close']])
+    selector.fit(X,y)
+    print(X.columns)
+    print(selector.support_)
+
+def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
+
+    try:
+ 
+        df = df[['date','ticker', 'close', 'twentyDayMVA','fiftyDayMVA', 'open', 'high', 'low', 'volume','10_year_note_close', 'index_close', 'gold_close', 'beta']]
+        df['date'] =  pd.to_datetime(arg=df['date']).dt.date 
+        df = df.loc[df['ticker'] == ticker]
+        df = df.tail(number_of_days)
+        max_date = df['date'].max()
+        min_date = df['date'].min()
+        df.fillna(-99999,inplace=True)
+        df.dropna(inplace=True)
+        X = np.array(df.drop(['close','ticker', 'date','index_close'],1))
+        y = np.array(df['close'])
+        X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=.2, train_size=.8)
+        scaler = StandardScaler()
+        scaler.fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)
+        best_fit = LinearRegression()
+        best_fit.fit(X_train, y_train)
+        return best_fit, best_fit.score(X_test,y_test), max_date, min_date, df, number_of_days
+
+    except Exception as err:
+
+        print(err)
+
+def getOpenPositions(file:str):
+
+     df = read_csv_bulk(input_file = file, file_size = 1000000000,chunk_count = 100000)
+     return df
+
+def get_tickers_dow(include_company_data: bool=True,outfile: str=r'c:\users\cosmi\onedrive\desktop\dow_tickers.csv', refreshFileOutput: bool=False) ->pd.DataFrame:
+
+    if path.exists(outfile) and refreshFileOutput==False:
+
+        return pd.read_csv(outfile)
+
+    else:
+    
+        dow_table = tickers_dow(include_company_data)
+        dow_table.to_csv(outfile)
+        return dow_table
+
+def get_tickers_sp500(include_company_data: bool=True, outfile: str=r'c:\users\cosmi\onedrive\desktop\sp500_tickers.csv', refreshFileOutput: bool=False) ->pd.DataFrame:
+
+    if path.exists(outfile) and refreshFileOutput==False:
+
+        return pd.read_csv(outfile)
+
+    else:
+
+        sp500_table = tickers_sp500(include_company_data)
+        sp500_table.to_csv(outfile)
+        return sp500_table
+
+def get_tickers_nasdaq(include_company_data: bool=True,outfile: str=r'c:\users\cosmi\onedrive\desktop\nasdaq_tickers.csv', refreshFileOutput: bool=False) ->pd.DataFrame:
+
+    if path.exists(outfile) and refreshFileOutput==False:
+
+        return pd.read_csv(outfile)
+
+    else:
+    
+        nasdaq_table = tickers_nasdaq(include_company_data)
+        nasdaq_table.to_csv(outfile)
+        return nasdaq_table
+
+def get_tickers_other(include_company_data: bool=True,outfile: str=r'c:\users\cosmi\onedrive\desktop\other_tickers.csv', refreshFileOutput: bool=False) ->pd.DataFrame:
+
+    if path.exists(outfile) and refreshFileOutput==False:
+
+        return pd.read_csv(outfile)
+
+    else:
+    
+        other_table = tickers_other(include_company_data)
+        other_table.to_csv(outfile)
+        return other_table
+

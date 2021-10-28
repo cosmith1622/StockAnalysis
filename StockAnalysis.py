@@ -6,7 +6,7 @@ import datetime as dt
 import os
 from os import path, remove
 import concurrent.futures
-from sklearn.preprocessing import MinMaxScaler,scale
+from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 
@@ -14,10 +14,29 @@ from sklearn.linear_model import LinearRegression
 load data
 
 """
+
 ticker_start_date = dt.date(2019,9,13)
-#ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-ticker_end_date = dt.date(2021,9,20)
-#ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
+ticker_end_date = dt.date(2021,10,27)
+
+#data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
+#sf.featureSelection(df = data, ticker = 'HAL')
+#model_df = sf.getSecurityLinearModels(df = data, number_of_days = 45, ticker = 'XLE')
+#data = sf.get_ticker_jobs(
+ #                       refresh_index = False,
+ #                       refresh_data=False,
+ #                       index='SPY',
+ #                       outputfile=r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',
+ #                       njobs=4, 
+ #                       start_date=ticker_start_date
+ #                   )  
+
+#data = data.loc[data['ticker']=='CMCSA', ['close', 'twentyDayMVA','open', 'high', 'low']]
+#print(data.tail(45))
+#scaler = StandardScaler()
+#Scale
+#print(scaler.fit(data))
+#print(scaler.mean_)
+#print(scaler.transform([[20, 20,20,20]]))
 
 index_list =['DIA','SPY','NDX']
 index_prices_file_list = [r'c:\users\cosmi\onedrive\desktop\dia_test.csv',
@@ -48,7 +67,7 @@ index_data_lists =[ sf.get_index_data
                          start_date = ticker_start_date,
                         #end_date = ticker_end_date,
                          outfile= x[1], 
-                         refreshFileOutput=False
+                         refreshFileOutput=True
                         )
                     for x in list_of_index
                   ]
@@ -56,11 +75,10 @@ index_data_df = pd.concat([pd.DataFrame(data=x) for x in index_data_lists])
 index_data_df = index_data_df[['date', 'adjclose', 'ticker', 'index_rolling_std']]
 index_data_df.rename(columns={'date':'index_date', 'adjclose':'index_close'},inplace=True)
 index_data_df.reset_index(inplace=True)
-
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
-                        refresh_data=False,
+                        refresh_data=True,
                         index=x[0],
                         outputfile=x[1],
                         njobs=4, 
@@ -72,35 +90,41 @@ stock_data_lists = [ sf.get_ticker_jobs
 stock_data_df = pd.concat([pd.DataFrame(data=x) for x in stock_data_lists])
 etf_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=False,
+                     refresh_data=True,
                      index='ETF',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\etf_test.csv',
                      njobs=1,
                      start_date=ticker_start_date
                  )
-
+other_data_df = sf.get_ticker_jobs(
+                     refresh_index=False,
+                     refresh_data=True,
+                     index='SPY',
+                     outputfile=r'c:\users\cosmi\onedrive\desktop\other_test.csv',
+                     njobs=1,
+                     start_date=ticker_start_date
+                 )
 gld_data_df = sf.get_index_data(
                      ticker = 'GLD',
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\gld.csv', 
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
 gld_data_df.rename(columns={'ticker':'gold_index', 'close':'gold_close', 'date':'gold_date'}, inplace=True)
 gld_data_df =gld_data_df[['gold_index', 'gold_close', 'gold_date']]
-
 sptl_data_df = sf.get_index_data(
                      ticker = 'SPTL',
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\sptl.csv',
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
+
 sptl_data_df.rename(columns={'ticker':'10_year_note_index', 'close':'10_year_note_close', 'date':'10_year_note_date'},inplace=True)
 sptl_data_df =sptl_data_df[['10_year_note_index', '10_year_note_close', '10_year_note_date']]
 sptl_data_df.sort_values(by=['10_year_note_date'],ascending=['ascending'],inplace=True)
-
-stock_data_df = pd.concat(pd.DataFrame(data=x)for x in [stock_data_df,etf_data_df])
+stock_data_df = pd.concat(pd.DataFrame(data=x)for x in [stock_data_df,etf_data_df,other_data_df])
 stock_data_df.drop_duplicates(['ticker','date'],inplace=True)
 stock_data_df.reset_index(drop=True,inplace=True)
 index = ['DOW' if index_data_df['ticker'][x] == 'DIA' else 'NASDAQ' if index_data_df['ticker'][x] == 'NDX' else 'SPY500' for x in index_data_df.index]
@@ -114,8 +138,8 @@ stock_data_df = stock_data_df.merge(right=sptl_data_df, how='inner', left_on='da
 stock_data_df.drop(columns='10_year_note_date',inplace=True)
 companies_info_df = sf.get_companies_info(
                         stock_data_df['ticker'].drop_duplicates(keep='first',inplace=False),
-                        outfile=r'c:\users\cosmi\onedrive\desktop\portfolio_analysis_test.csv',
-                        refreshFileOutput=False
+                        outfile=r'c:\users\cosmi\onedrive\desktop\companies_info_test.csv',
+                        refreshFileOutput=True
                         )
 stock_data_df = stock_data_df.merge(right=companies_info_df,how='left',on='ticker')
 
@@ -140,8 +164,10 @@ stock_data_df['pctChange'] = stock_data_df['close'] / stock_data_df['previous_cl
 stock_data_df['naturalLog'] = np.log(stock_data_df['pctChange'])
 rolling_std_column = stock_data_df.groupby(by=['ticker'], as_index=False)['naturalLog'].rolling(20).std()
 stock_data_df['rollingSTD'] = rolling_std_column.reset_index(level=0, drop=True)
-one_std_column = (stock_data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(1).sum() * stock_data_df.groupby(by=['ticker'], as_index=False)['rollingSTD'].rolling(1).sum() * (np.sqrt(5))) / (np.sqrt(365))
-stock_data_df['onestandarddeviationmove'] = one_std_column.reset_index(level=0, drop=True)
+one_week_std_column = (stock_data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(1).sum() * stock_data_df.groupby(by=['ticker'], as_index=False)['rollingSTD'].rolling(1).sum() * (np.sqrt(5))) / (np.sqrt(253))
+stock_data_df['oneweekstandarddeviationmove'] = one_week_std_column.reset_index(level=0, drop=True)
+two_week_std_column = (stock_data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(1).sum() * stock_data_df.groupby(by=['ticker'], as_index=False)['rollingSTD'].rolling(1).sum() * (np.sqrt(10))) / (np.sqrt(253))
+stock_data_df['twoweekstandarddeviationmove'] = two_week_std_column.reset_index(level=0, drop=True)
 max_close_column = stock_data_df.groupby(by=['ticker'])['close'].rolling(200).max()
 max_close_df = pd.DataFrame(data=max_close_column)
 max_close_df.reset_index(level=0, inplace=True)
@@ -161,50 +187,50 @@ stock_data_df.reset_index(drop=True,inplace=True)
 price_target = [stock_data_df['close'][x] if stock_data_df['sixtytwoRetracement'][x] > stock_data_df['close'][x] else stock_data_df['twentythreeRetracement'][x] if stock_data_df['twentythreeRetracementDiff'][x] > 0 else stock_data_df['thirtyeightRetracement'][x] if stock_data_df['thirtyeightRetracementDiff'][x] > 0 else stock_data_df['sixtytwoRetracement'][x] for x in stock_data_df.index]
 stock_data_df['priceTarget'] = price_target
 stock_data_df.drop(labels=['naturalLog', 'pctChange'],axis=1,inplace=True)
-thirtyDayMVA = stock_data_df.groupby(by=['ticker'])['close'].rolling(20).mean()
-fortyFiveDayMVA = stock_data_df.groupby(by=['ticker'])['close'].rolling(30).mean()
-fortyFiveDaySTD = stock_data_df.groupby(by=['ticker'])['close'].rolling(30).std()
-thirtyDayMVA_df = pd.DataFrame(data=thirtyDayMVA)
-fortyFiveDayMVA_df = pd.DataFrame(data=fortyFiveDayMVA)
-fortyFiveDaySTD_df = pd.DataFrame(data=fortyFiveDaySTD)
-thirtyDayMVA_df.rename(columns={"close": "thirtyDayMVA"}, inplace = True)
-fortyFiveDayMVA_df.rename(columns={"close": "fortyFiveDayMVA"}, inplace = True)
-fortyFiveDaySTD_df.rename(columns={"close": "fortyFiveDaySTD"}, inplace = True)
-thirtyDayMVA_df.reset_index(level = 0,inplace = True)
-fortyFiveDayMVA_df.reset_index(level = 0,inplace = True)
-fortyFiveDaySTD_df.reset_index(level = 0,inplace = True)
-thirtyDayMVA_df.sort_index(inplace=True)
-thirtyDayMVA_df.reset_index(inplace=True)
-fortyFiveDayMVA_df.sort_index(inplace=True)
-fortyFiveDayMVA_df.reset_index(inplace=True)
-fortyFiveDaySTD_df.sort_index(inplace=True)
-fortyFiveDaySTD_df.reset_index(inplace=True)
+twentyDayMVA = stock_data_df.groupby(by=['ticker'])['close'].rolling(20).mean()
+fiftyDayMVA = stock_data_df.groupby(by=['ticker'])['close'].rolling(50).mean()
+twentyDaySTD = stock_data_df.groupby(by=['ticker'])['close'].rolling(20).std()
+twentyDayMVA_df = pd.DataFrame(data=twentyDayMVA)
+fiftyDayMVA_df = pd.DataFrame(data=fiftyDayMVA)
+twentyDaySTD_df = pd.DataFrame(data=twentyDaySTD)
+twentyDayMVA_df.rename(columns={"close": "twentyDayMVA"}, inplace = True)
+fiftyDayMVA_df.rename(columns={"close": "fiftyDayMVA"}, inplace = True)
+twentyDaySTD_df.rename(columns={"close": "twentyDaySTD"}, inplace = True)
+twentyDayMVA_df.reset_index(level = 0,inplace = True)
+fiftyDayMVA_df.reset_index(level = 0,inplace = True)
+twentyDaySTD_df.reset_index(level = 0,inplace = True)
+twentyDayMVA_df.sort_index(inplace=True)
+twentyDayMVA_df.reset_index(inplace=True)
+fiftyDayMVA_df.sort_index(inplace=True)
+fiftyDayMVA_df.reset_index(inplace=True)
+#fortyFiveDaySTD_df.sort_index(inplace=True)
+#fortyFiveDaySTD_df.reset_index(inplace=True)
 stock_data_df.sort_index(inplace=True)
-stock_data_df['thirtyDayMVA'] = thirtyDayMVA_df['thirtyDayMVA']
-stock_data_df['fortyFiveDayMVA'] = fortyFiveDayMVA_df['fortyFiveDayMVA']
-stock_data_df['fortyFiveDaySTD'] = fortyFiveDaySTD_df['fortyFiveDaySTD']
-stock_data_df['BollingerBandLow'] = stock_data_df['fortyFiveDayMVA'] - (stock_data_df['fortyFiveDaySTD']*2)
-stock_data_df['BollingerBandHigh'] = stock_data_df['fortyFiveDayMVA'] + (stock_data_df['fortyFiveDaySTD']*2)
-stock_data_df['aboveThirtyDayMVA'] = stock_data_df['close'] > stock_data_df['thirtyDayMVA']
+stock_data_df['twentyDayMVA'] = twentyDayMVA_df['twentyDayMVA']
+stock_data_df['fiftyDayMVA'] = fiftyDayMVA_df['fiftyDayMVA']
+stock_data_df['twentyDaySTD'] = twentyDaySTD_df['twentyDaySTD']
+stock_data_df['BollingerBandLow'] = stock_data_df['twentyDayMVA'] - (stock_data_df['twentyDaySTD']*2.5)
+stock_data_df['BollingerBandHigh'] = stock_data_df['twentyDayMVA'] + (stock_data_df['twentyDaySTD']*2.5)
+stock_data_df['aboveTwentyDayMVA'] = stock_data_df['close'] > stock_data_df['twentyDayMVA']
 stock_data_df['belowBollingerBandLow'] =  stock_data_df['BollingerBandLow'] > stock_data_df['close']
 stock_data_df['diffBollingBandLowClose'] =  (stock_data_df['BollingerBandLow'] - stock_data_df['close']).abs() / stock_data_df['close']
 stock_data_df['belowBollingerBandHigh'] = stock_data_df['close'] < stock_data_df['BollingerBandHigh']
 stock_data_df['aboveBollingerBandLow'] =  stock_data_df['BollingerBandLow'] < stock_data_df['close']
 stock_data_df['aboveBollingerBandHigh'] = stock_data_df['close'] > stock_data_df['BollingerBandHigh']
 stock_data_df['diffBollingerBandHighClose'] = (stock_data_df['close'] - stock_data_df['BollingerBandHigh']).abs() / stock_data_df['close']
-stock_data_df.loc[stock_data_df['aboveThirtyDayMVA'] == True, 'distanceAboveThirtyDayMVA'] = (stock_data_df['close'] - stock_data_df['BollingerBandHigh'])**2
-stock_data_df.loc[stock_data_df['aboveThirtyDayMVA'] == False,'distanceBelowThirtyDayMVA'] = (stock_data_df['close'] - stock_data_df['BollingerBandLow'])**2
+stock_data_df.loc[stock_data_df['aboveTwentyDayMVA'] == True, 'distanceAboveTwentyDayMVA'] = (stock_data_df['close'] - stock_data_df['BollingerBandHigh'])**2
+stock_data_df.loc[stock_data_df['aboveTwentyDayMVA'] == False,'distanceBelowTwentyDayMVA'] = (stock_data_df['close'] - stock_data_df['BollingerBandLow'])**2
 
 """
 keep all the dates in the get data all csv
 
 """
-stock_data_df_max = stock_data_df.loc[(stock_data_df['date'] == ticker_end_date.strftime('%Y-%m-%d')) & (stock_data_df['close'] <= 80) & (stock_data_df['volume'].astype('int64') >= 1000000)]
+stock_data_df_max = stock_data_df.loc[(stock_data_df['date'] == ticker_end_date.strftime('%Y-%m-%d')) & (stock_data_df['close'] <= 120) & (stock_data_df['volume'].astype('int64') >= 1000000)]
 stock_data_df_max.to_csv(r'c:\users\cosmi\onedrive\desktop\get_data_max_date_test.csv')
 list_of_tickers = stock_data_df_max['ticker'].drop_duplicates(keep='first',inplace=False)
 stock_data_df = pd.concat([pd.DataFrame(data=stock_data_df.loc[stock_data_df['ticker'] == x]) for x in list_of_tickers._values])
 stock_data_df = sf.get_min_max_scaler(df=stock_data_df)
-portfolio_df = sf.getPortfolio(df=stock_data_df[['date','ticker','close','index','index_close', 'priceTarget', 'rollingSTD', 'index_rolling_std', 'onestandarddeviationmove', 'sector', 'industry']])
+portfolio_df = sf.getPortfolio(df=stock_data_df[['date','ticker','close','index','index_close', 'priceTarget', 'rollingSTD', 'index_rolling_std', 'oneweekstandarddeviationmove', 'twoweekstandarddeviationmove', 'sector', 'industry']])
 portfolio_df = portfolio_df[['exit_price','entry_price', 'market_corr', 'beta','Pct_To_Entry_Price']]
 stock_data_df.reset_index(drop=True, inplace=True)
 stock_data_df['Pct_To_Entry_Price'] = portfolio_df['Pct_To_Entry_Price'] 
@@ -212,7 +238,32 @@ stock_data_df['market_corr'] = portfolio_df['market_corr']
 stock_data_df['entry_price'] = portfolio_df['entry_price'] 
 stock_data_df['exit_price'] = portfolio_df['exit_price'] 
 stock_data_df['beta'] = portfolio_df['beta']
-print(stock_data_df.loc[stock_data_df['ticker']=='FCX'].tail(50))
+
+dateTuple = (45,)
+param_list = [{'number_of_days':x} for x in dateTuple]
+with concurrent.futures.ThreadPoolExecutor() as executor:
+     futures = [executor.submit(sf.getSecurityLinearModels , df=stock_data_df,number_of_days=param.get('number_of_days'), ticker=ticker) for ticker in list_of_tickers for param in param_list]
+     return_value = [f.result() for f in futures]
+
+model_DF = pd.concat([pd.DataFrame(data=x)for x in return_value])
+model_DF['y1'] = model_DF['intercept_'] + (model_DF['coef_0'] * 0) + (model_DF['coef_1'] * 0) + (model_DF['coef_2'] * 0) + (model_DF['coef_3'] * 0) + (model_DF['coef_4'] * 0) + (model_DF['coef_5'] * 0) + (model_DF['coef_6'] * 0) + (model_DF['coef_7'] * 0)
+model_DF['y2'] = model_DF['intercept_'] + (model_DF['coef_0'] * 1) + (model_DF['coef_1'] * 1) + (model_DF['coef_2'] * 1) + (model_DF['coef_3'] * 1) + (model_DF['coef_4'] * 1) + (model_DF['coef_5'] * 1) + (model_DF['coef_6'] * 1) + (model_DF['coef_7'] * 1) 
+model_DF['y1-y2'] = model_DF['y1'] - model_DF['y2']
+model_DF['x1'] = 0
+model_DF['x2'] = 1
+model_DF['x1-x2'] = model_DF['x1'] - model_DF['x2']
+model_DF['slope'] = (model_DF['y1-y2'] / model_DF['x1-x2']) 
+model_DF = model_DF[['score', 'slope', 'max_date_time', 'security']]
+model_DF['max_date_time'] = model_DF['max_date_time'].apply(lambda x: dt.datetime.strftime(x, '%Y-%m-%d'))
+stock_data_df = stock_data_df.merge(right=model_DF,how='left',left_on=['date','ticker'],right_on=['max_date_time','security'])
+stock_data_df.drop(labels='security', axis=1, inplace=True)
+stock_data_df.drop_duplicates(subset=['date','ticker'], inplace=True)
+
+open_positions_df = sf.getOpenPositions(file = r'c:\users\cosmi\onedrive\desktop\portfolio.csv')
+stock_data_df = stock_data_df.merge(right=open_positions_df,how='left', left_on=['date','ticker'], right_on=['date','ticker'])
+stock_data_df['entry_price'] = [stock_data_df['entry_price_y'][x] if stock_data_df['open_position'][x] == 1 else stock_data_df['entry_price_x'][x] for x in stock_data_df.index] 
+stock_data_df['exit_price'] = [stock_data_df['exit_price_y'][x] if stock_data_df['open_position'][x] == 1 else stock_data_df['exit_price_x'][x] for x in stock_data_df.index] 
+stock_data_df.drop(columns=['exit_price_y','exit_price_x','entry_price_y', 'entry_price_x', 'Unnamed: 0'],inplace=True)
 sf.to_csv_bulk(data=stock_data_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv')
 
 
