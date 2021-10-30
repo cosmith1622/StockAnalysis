@@ -17,6 +17,7 @@ load data
 
 ticker_start_date = dt.date(2019,9,13)
 ticker_end_date = dt.date(2021,10,29)
+data = sf.get_ratios(ticker = 'NFLX')
 data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\dow_test.csv',file_size = 1000000000,chunk_count = 100000)
 #data = data.loc[data['ticker']=='MSFT']
 list_of_tickers = data['ticker'].drop_duplicates(keep='first',inplace=False)

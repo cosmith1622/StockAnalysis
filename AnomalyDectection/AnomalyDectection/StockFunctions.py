@@ -9,7 +9,7 @@ from os import path, remove
 import requests_html as request
 import html5lib as html
 import PandasExtra as pe
-from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other, get_stats_valuation
+from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other, get_stats_valuation, get_income_statement, get_stats
 from yahoo_finance_api2 import share
 from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
@@ -523,6 +523,41 @@ def get_statistics(ticker: str):
                                      columns = [row[0] for row in column_index]
                                     )
         statistics_df.loc[:, 'ticker'] = ticker
+        return statistics_df
+     except Exception as err:
+
+        print(err)
+
+def get_ratios(ticker:str):
+
+    try:
+
+        df = get_stats(ticker = ticker)
+        columns = [x[0] for x in df._values]
+        rows = [[x[1] for x in df.values]]
+        ratios_df = pd.DataFrame(data = rows, 
+                                     columns = columns
+                                    )
+        ratios_df.loc[:, 'ticker'] = ticker
+        return ratios_df
+
+    except Exception as err:
+
+        print(err)
+
+
+def get_income_statement_data(ticker: str, yearly:bool = True):
+
+     try:
+
+        df = get_income_statement(ticker = ticker, yearly = yearly)
+        columns = df.index
+        row_index = df._values
+        statistics_df = pd.DataFrame(data = [[row[0] for row in row_index]], 
+                                     columns = columns
+                                    )
+        statistics_df.loc[:, 'ticker'] = ticker
+        print(statistics_df['grossProfit'])
         return statistics_df
      except Exception as err:
 
