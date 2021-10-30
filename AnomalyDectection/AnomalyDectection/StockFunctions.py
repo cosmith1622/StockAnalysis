@@ -9,7 +9,7 @@ from os import path, remove
 import requests_html as request
 import html5lib as html
 import PandasExtra as pe
-from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other
+from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other, get_stats_valuation
 from yahoo_finance_api2 import share
 from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
@@ -512,4 +512,20 @@ def get_tickers_other(include_company_data: bool=True,outfile: str=r'c:\users\co
         other_table = tickers_other(include_company_data)
         other_table.to_csv(outfile)
         return other_table
+
+def get_statistics(ticker: str):
+
+     try:
+
+        df = get_stats_valuation(ticker = ticker)
+        column_index = df._values
+        statistics_df = pd.DataFrame(data = [[row[1] for row in column_index]], 
+                                     columns = [row[0] for row in column_index]
+                                    )
+        statistics_df.loc[:, 'ticker'] = ticker
+        return statistics_df
+     except Exception as err:
+
+        print(err)
+        
 
