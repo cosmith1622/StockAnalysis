@@ -9,12 +9,15 @@ from os import path, remove
 import requests_html as request
 import html5lib as html
 import PandasExtra as pe
+import datapackage
+from fred import Fred
 from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other, get_stats_valuation, get_income_statement, get_stats
 from yahoo_finance_api2 import share
 from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
+from sklearn.decomposition import PCA
 
 def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=None, index_as_date: bool=False,refreshFileOutput: bool=False) ->pd.DataFrame:
 
@@ -395,13 +398,13 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
                                                   intercept_ = best_fit.intercept_,
                                                   coef_0 = best_fit.coef_[0],
                                                   coef_1 = best_fit.coef_[1],
-                                                  coef_2 = best_fit.coef_[2],
-                                                  coef_3 = best_fit.coef_[3],
-                                                  coef_4 = best_fit.coef_[4],
-                                                  coef_5 = best_fit.coef_[5],
-                                                  coef_6 = best_fit.coef_[6],
-                                                  coef_7 = best_fit.coef_[7],
-                                                  coef_8 = best_fit.coef_[8],
+                                                 # coef_2 = best_fit.coef_[2],
+                                                 # coef_3 = best_fit.coef_[3],
+                                                 #coef_4 = best_fit.coef_[4],
+                                                 #coef_5 = best_fit.coef_[5],
+                                                 #coef_6 = best_fit.coef_[6],
+                                                 #coef_7 = best_fit.coef_[7],
+                                                 # coef_8 = best_fit.coef_[8],
                                                                     
                                                  )
                                                  ,index = [0]
@@ -414,38 +417,42 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
 
     return linearmodeldf 
 
-def featureSelection(df : pd.DataFrame, ticker : str):
+def featureSelection(df : pd.DataFrame, ticker : str, number_of_days: int):
 
-    print('cole')
-    estimator = LinearRegression()
-    selector = RFE(estimator,n_features_to_select = 5, step = 1 )
-    df = df.loc[df['ticker']==ticker].tail(50)
-    print(df.columns)
-    X = df[['high', 'low', 'open', 'volume', 
-       'index_close', 'gold_close',
-       '10_year_note_close',
-       'twentyDayMVA', 'fiftyDayMVA',
-     ]]
-    X.fillna(-99999,inplace=True)
-    y = np.array(df[['close']])
-    selector.fit(X,y)
+    #estimator = LinearRegression()
+    #selector = RFE(estimator,n_features_to_select = 5, step = 1 )
+    selector = PCA(n_components=2)
+    df = df.loc[df['ticker']==ticker].tail(number_of_days)
+    X = df.drop(labels=['date','ticker','close', 'industry', 'energy_close', 'vix_close','fiftyDayMVA', 'index_close', 'volume'], axis =1)
     print(X.columns)
-    print(selector.support_)
+    print(df.columns)
+    X.fillna(-99999,inplace=True)
+    y = np.array(df['close'])
+    scaler = StandardScaler()
+    scaler.fit(X)
+    X = scaler.transform(X)
+    selector.fit(X)
+    print(selector.explained_variance_ratio_)
+    #selector.fit(X,y)
+    #print(selector.support_)
 
 def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
 
     try:
  
-        df = df[['date','ticker', 'close', 'twentyDayMVA','fiftyDayMVA', 'open', 'high', 'low', 'volume','10_year_note_close', 'index_close', 'gold_close', 'beta']].copy()
-        #df = df[['date','ticker', 'close', 'open', 'high', 'low']].copy()
+        #df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA','fiftyDayMVA', 'volume','10_year_note_close', 'index_close', 'gold_close', 'vix_close', 'energy_close']].copy()
+        df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA', 'oil_price']]
         df['date'] =  pd.to_datetime(arg=df['date']).dt.date 
         df = df.loc[df['ticker'] == ticker]
         df = df.tail(number_of_days)
         max_date = df['date'].max()
         min_date = df['date'].min()
-        df.fillna(-99999,inplace=True)
+        mean_oil_price = df['oil_price'].mean()
+        df['oil_price'].fillna(mean_oil_price,inplace=True)
+        print(df.tail(50))
         df.dropna(inplace=True)
-        X = np.array(df.drop(['close','ticker', 'index_close', 'date'],1))
+        X = np.array(df.drop(['close','ticker','date','industry'],axis = 1))
+        #X = np.array(df.drop(['close','ticker','date','industry', 'gold_close', 'vix_close','index_close', 'volume', 'fiftyDayMVA'],1))
         y = np.array(df['close'])
         X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=.2, train_size=.8)
         scaler = StandardScaler()
@@ -528,13 +535,50 @@ def get_statistics(ticker: str):
 
         print(err)
 
+def string_to_num_conversion(object:str):
+
+    print(object)
+  
+    try:
+
+        if pd.isna(object):
+
+            return np.nan
+
+        elif object[-1] == '%':
+
+            pct_num = round(float(object[:len(object)-1])/100,2)
+            return pct_num
+
+        elif object[-1] == 'M':
+
+            million_num  = int(float(object[:len(object)-1])*1000000)
+            return million_num
+
+        elif object[-1] == 'B':
+
+            billion_num  = int(float(object[:len(object)-1])*1000000000)
+            return billion_num
+
+        elif object[-1] == 'K':
+
+            thousand_num  = int(float(object[:len(object)-1])*1000)
+            return thousand_num
+
+        else:
+
+            return object
+
+    except Exception as err:
+        print(err)
+
 def get_ratios(ticker:str):
 
     try:
 
         df = get_stats(ticker = ticker)
         columns = [x[0] for x in df._values]
-        rows = [[x[1] for x in df.values]]
+        rows = [[string_to_num_conversion(x[1]) for x in df.values]]
         ratios_df = pd.DataFrame(data = rows, 
                                      columns = columns
                                     )
@@ -562,5 +606,39 @@ def get_income_statement_data(ticker: str, yearly:bool = True):
      except Exception as err:
 
         print(err)
+
+def get_vix_data():
+
+    data_url = 'https://datahub.io/core/finance-vix/datapackage.json'
+
+    # to load Data Package into storage
+    package = datapackage.Package(data_url)
+
+    # to load only tabular data
+    resources = package.resources
+    for resource in resources:
+        if resource.tabular:
+            data = pd.read_csv(resource.descriptor['path'])
+            
+    return data
+
+def get_reports():
+
+    fr = Fred(api_key = '',response_type='json')
+    #df = fr.series.search(search_text = 'Unemployment Rate US')
+    df = fr.series.search(search_text = 'Crude Oil Prices: West Texas Intermediate (WTI)')
+    df = pd.read_json(df)
+    #param = {'frequency':'Monthly','observation_start':'2019-09-01','observation_end':'2021-10-30' }
+    #df = fr.series.observations(series_id='UNRATE')
+    df = fr.series.observations(series_id='DCOILWTICO')
+    df = pd.read_json(df)
+    data_df = pd.concat([pd.DataFrame(data = record[12], index = [0] ) for record in df._values])
+    ticker_end_date = dt.date(2021,8,15)
+    data_df = data_df.loc[data_df['date'] >= ticker_end_date.strftime('%Y-%m-%d')]
+    data_df = data_df.loc[:, ['date', 'value']]
+    oil_price = [int(72) if record[1] == '.' else round(float(record[1]),2) for record in data_df._values]
+    data_df.loc[:, 'oil_price'] = oil_price
+    data_df.drop(labels = ['value'], axis = 1, inplace = True)
+    return data_df
         
 

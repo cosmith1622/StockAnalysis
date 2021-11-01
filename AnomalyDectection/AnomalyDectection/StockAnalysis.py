@@ -17,23 +17,43 @@ load data
 
 ticker_start_date = dt.date(2019,9,13)
 ticker_end_date = dt.date(2021,10,29)
-data = sf.get_ratios(ticker = 'NFLX')
-data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\dow_test.csv',file_size = 1000000000,chunk_count = 100000)
-#data = data.loc[data['ticker']=='MSFT']
-list_of_tickers = data['ticker'].drop_duplicates(keep='first',inplace=False)
-stats_df = pd.concat([pd.DataFrame(data = sf.get_statistics(ticker = ticker)) for ticker in list_of_tickers])
-print(stats_df.tail(50))
-#sf.featureSelection(df = data, ticker = 'HAL')
-#model_df = sf.getSecurityLinearModels(df = data, number_of_days = 45, ticker = 'DOW')
-#list_of_tickers = data['ticker'].drop_duplicates(keep='first',inplace=False)
-#dateTuple = (45,)
-#param_list = [{'number_of_days':x} for x in dateTuple]
-#with concurrent.futures.ThreadPoolExecutor() as executor:
-#     futures = [executor.submit(sf.getSecurityLinearModels , df=data.loc[data['ticker']==ticker],number_of_days=param.get('number_of_days'), ticker=ticker) for ticker in list_of_tickers for param in param_list]
-#     return_value = [f.result() for f in futures]
 
-#model_DF = pd.concat([pd.DataFrame(data=x)for x in return_value])
-#sf.to_csv_bulk(data=model_DF,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\model_test.csv')
+oil_df  = sf.get_reports()
+sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\oil_prices.csv')
+companies_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\companies_info_test.csv',file_size = 1000000000,chunk_count = 100000)
+companies_df = companies_df[['ticker','industry']]
+vix_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\vix_data.csv',file_size = 1000000000,chunk_count = 100000)
+vix_df = vix_df[['date', 'close']]
+spy_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\spy500_test.csv',file_size = 1000000000,chunk_count = 100000)
+etf_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\etf_test.csv',file_size = 1000000000,chunk_count = 100000)
+#oil_df = etf_df.loc[etf_df['ticker']=='USO']
+#oil_df = oil_df[['date', 'close']]
+energy_df = etf_df.loc[etf_df['ticker']=='XLE']
+energy_df = energy_df[['date', 'close']]
+data_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
+#data_df = data_df.loc[data_df['ticker']=='HAL']
+data_df = data_df[['close','ticker','date', 'twentyDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
+data_df = data_df.merge(right=vix_df,how='inner', on='date')
+data_df.rename(columns={"close_x": "close", "close_y": "vix_close"}, inplace = True)
+data_df = data_df.merge(right=oil_df,how='left', on='date')
+data_df.rename(columns={"close_x": "close"}, inplace = True)
+data_df = data_df.merge(right=energy_df,how='inner', on='date')
+data_df.rename(columns={"close_x": "close", "close_y": "energy_close"}, inplace = True)
+data_df = data_df.merge(right=companies_df,how='inner', on='ticker')
+data_df = data_df.loc[data_df['industry']== 'Oil & Gas Equipment & Services']
+
+variable_df = sf.featureSelection(df = data_df, number_of_days = 45, ticker = 'BKR')
+#model_df = sf.getLinearModel(df = data_df, number_of_days = 45, ticker = 'HAL')
+#model_df = sf.getSecurityLinearModels(df = data, number_of_days = 45, ticker = 'DOW')
+list_of_tickers = data_df['ticker'].drop_duplicates(keep='first',inplace=False)
+dateTuple = (45,)
+param_list = [{'number_of_days':x} for x in dateTuple]
+with concurrent.futures.ThreadPoolExecutor() as executor:
+     futures = [executor.submit(sf.getSecurityLinearModels , df=data_df.loc[data_df['ticker']==ticker],number_of_days=param.get('number_of_days'), ticker=ticker) for ticker in list_of_tickers for param in param_list]
+     return_value = [f.result() for f in futures]
+
+model_DF = pd.concat([pd.DataFrame(data=x)for x in return_value])
+sf.to_csv_bulk(data=model_DF,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\model_test.csv')
 #data = sf.get_ticker_jobs(
  #                       refresh_index = False,
  #                       refresh_data=False,
