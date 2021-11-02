@@ -203,9 +203,9 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
 
 def get_min_max_scaler(df:pd.DataFrame):
 
-    ticker_start_date = dt.date(2019,10,31)
+    ticker_start_date = dt.date(2019,11,4)
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-    ticker_end_date = dt.date(2019,11,30)
+    ticker_end_date = dt.date(2019,12,15)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
     scaler = MinMaxScaler()

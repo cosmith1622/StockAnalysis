@@ -15,8 +15,8 @@ load data
 
 """
 
-ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,10,29)
+ticker_start_date = dt.date(2019,9,16)
+ticker_end_date = dt.date(2021,11,1)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -76,7 +76,7 @@ index_data_lists =[ sf.get_index_data
                          start_date = ticker_start_date,
                         #end_date = ticker_end_date,
                          outfile= x[1], 
-                         refreshFileOutput=False
+                         refreshFileOutput=True
                         )
                     for x in list_of_index
                   ]
@@ -84,6 +84,8 @@ index_data_df = pd.concat([pd.DataFrame(data=x) for x in index_data_lists])
 index_data_df = index_data_df[['date', 'adjclose', 'ticker', 'index_rolling_std']]
 index_data_df.rename(columns={'date':'index_date', 'adjclose':'index_close'},inplace=True)
 index_data_df.reset_index(inplace=True)
+index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_close']] = 15850
+index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_rolling_std']] = .009266
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
