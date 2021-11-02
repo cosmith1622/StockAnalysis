@@ -206,9 +206,9 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
 
 def get_min_max_scaler(df:pd.DataFrame):
 
-    ticker_start_date = dt.date(2019,10,31)
+    ticker_start_date = dt.date(2019,12,1)
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-    ticker_end_date = dt.date(2019,11,30)
+    ticker_end_date = dt.date(2019,12,31)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
     scaler = MinMaxScaler()
@@ -398,7 +398,7 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
                                                   intercept_ = best_fit.intercept_,
                                                   coef_0 = best_fit.coef_[0],
                                                   coef_1 = best_fit.coef_[1],
-                                                 # coef_2 = best_fit.coef_[2],
+                                                  coef_2 = best_fit.coef_[2],
                                                  # coef_3 = best_fit.coef_[3],
                                                  #coef_4 = best_fit.coef_[4],
                                                  #coef_5 = best_fit.coef_[5],
@@ -441,7 +441,7 @@ def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
     try:
  
         #df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA','fiftyDayMVA', 'volume','10_year_note_close', 'index_close', 'gold_close', 'vix_close', 'energy_close']].copy()
-        df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA', 'oil_price']]
+        df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA', 'oil_price','distance']]
         df['date'] =  pd.to_datetime(arg=df['date']).dt.date 
         df = df.loc[df['ticker'] == ticker]
         df = df.tail(number_of_days)
@@ -624,7 +624,7 @@ def get_vix_data():
 
 def get_reports():
 
-    fr = Fred(api_key = '',response_type='json')
+    fr = Fred(api_key = '8e6c689925a7564c2e3aeeccf29b71f7',response_type='json')
     #df = fr.series.search(search_text = 'Unemployment Rate US')
     df = fr.series.search(search_text = 'Crude Oil Prices: West Texas Intermediate (WTI)')
     df = pd.read_json(df)

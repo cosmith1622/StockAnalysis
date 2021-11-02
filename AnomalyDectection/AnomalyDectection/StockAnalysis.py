@@ -16,9 +16,10 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,10,29)
+ticker_end_date = dt.date(2021,11,1)
 
 oil_df  = sf.get_reports()
+print(oil_df.tail(50))
 sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\oil_prices.csv')
 companies_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\companies_info_test.csv',file_size = 1000000000,chunk_count = 100000)
 companies_df = companies_df[['ticker','industry']]
@@ -32,7 +33,7 @@ energy_df = etf_df.loc[etf_df['ticker']=='XLE']
 energy_df = energy_df[['date', 'close']]
 data_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
 #data_df = data_df.loc[data_df['ticker']=='HAL']
-data_df = data_df[['close','ticker','date', 'twentyDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
+data_df = data_df[['close','ticker','date', 'distanceAboveTwentyDayMVA','distanceBelowTwentyDayMVA','twentyDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
 data_df = data_df.merge(right=vix_df,how='inner', on='date')
 data_df.rename(columns={"close_x": "close", "close_y": "vix_close"}, inplace = True)
 data_df = data_df.merge(right=oil_df,how='left', on='date')
@@ -41,8 +42,10 @@ data_df = data_df.merge(right=energy_df,how='inner', on='date')
 data_df.rename(columns={"close_x": "close", "close_y": "energy_close"}, inplace = True)
 data_df = data_df.merge(right=companies_df,how='inner', on='ticker')
 data_df = data_df.loc[data_df['industry']== 'Oil & Gas Equipment & Services']
-
-variable_df = sf.featureSelection(df = data_df, number_of_days = 45, ticker = 'BKR')
+distance_from_20_day = [1 if data_df['close'][record] > data_df['twentyDayMVA'][record] else 0 for record in data_df.index]
+data_df.loc[:, 'distance'] = distance_from_20_day
+#print(data_df.loc[data_df['ticker']=='BKR',['date','ticker', 'close', 'twentyDayMVA', 'distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA', 'distance']].tail(50))
+#variable_df = sf.featureSelection(df = data_df, number_of_days = 45, ticker = 'BKR')
 #model_df = sf.getLinearModel(df = data_df, number_of_days = 45, ticker = 'HAL')
 #model_df = sf.getSecurityLinearModels(df = data, number_of_days = 45, ticker = 'DOW')
 list_of_tickers = data_df['ticker'].drop_duplicates(keep='first',inplace=False)
