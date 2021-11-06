@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2021,11,1)
+ticker_end_date = dt.date(2021,11,5)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -84,12 +84,12 @@ index_data_df = pd.concat([pd.DataFrame(data=x) for x in index_data_lists])
 index_data_df = index_data_df[['date', 'adjclose', 'ticker', 'index_rolling_std']]
 index_data_df.rename(columns={'date':'index_date', 'adjclose':'index_close'},inplace=True)
 index_data_df.reset_index(inplace=True)
-index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_close']] = 15850
-index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_rolling_std']] = .009266
+#index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_close']] = 15850
+#index_data_df.loc[(index_data_df['ticker']=='NDX') & (index_data_df['index_date']==ticker_end_date.strftime('%Y-%m-%d')), ['index_rolling_std']] = .009266
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
-                        refresh_data=False,
+                        refresh_data=True,
                         index=x[0],
                         outputfile=x[1],
                         njobs=4, 
@@ -101,7 +101,7 @@ stock_data_lists = [ sf.get_ticker_jobs
 stock_data_df = pd.concat([pd.DataFrame(data=x) for x in stock_data_lists])
 etf_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=False,
+                     refresh_data=True,
                      index='ETF',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\etf_test.csv',
                      njobs=1,
@@ -109,7 +109,7 @@ etf_data_df = sf.get_ticker_jobs(
                  )
 other_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=False,
+                     refresh_data=True,
                      index='SPY',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\other_test.csv',
                      njobs=1,
@@ -120,7 +120,7 @@ gld_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\gld.csv', 
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
 gld_data_df.rename(columns={'ticker':'gold_index', 'close':'gold_close', 'date':'gold_date'}, inplace=True)
 gld_data_df =gld_data_df[['gold_index', 'gold_close', 'gold_date']]
@@ -129,7 +129,7 @@ sptl_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\sptl.csv',
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
 sptl_data_df.rename(columns={'ticker':'10_year_note_index', 'close':'10_year_note_close', 'date':'10_year_note_date'},inplace=True)
 sptl_data_df =sptl_data_df[['10_year_note_index', '10_year_note_close', '10_year_note_date']]
@@ -165,7 +165,7 @@ add the open position for real analysis
 
 """
 
-#stock_data_df = stock_data_df.loc[(stock_data_df['ticker']=='FCX') | (stock_data_df['ticker']=='DOW')]
+#stock_data_df = stock_data_df.loc[(stock_data_df['ticker']=='MOS') | (stock_data_df['ticker']=='DOW') ]
 stock_data_df = stock_data_df.merge(right=stock_age_df,how='inner',on='ticker')
 stock_data_df = stock_data_df.loc[(stock_data_df['record_count']>= 240)]
 stock_data_df.sort_values(by=['ticker','date'], inplace=True)
@@ -236,6 +236,7 @@ stock_data_df.loc[stock_data_df['aboveTwentyDayMVA'] == False,'distanceBelowTwen
 keep all the dates in the get data all csv
 
 """
+
 stock_data_df_max = stock_data_df.loc[(stock_data_df['date'] == ticker_end_date.strftime('%Y-%m-%d')) & (stock_data_df['close'] <= 120) & (stock_data_df['volume'].astype('int64') >= 1000000)]
 stock_data_df_max.to_csv(r'c:\users\cosmi\onedrive\desktop\get_data_max_date_test.csv')
 list_of_tickers = stock_data_df_max['ticker'].drop_duplicates(keep='first',inplace=False)
@@ -275,7 +276,6 @@ stock_data_df = stock_data_df.merge(right=open_positions_df,how='left', left_on=
 stock_data_df['entry_price'] = [stock_data_df['entry_price_y'][x] if stock_data_df['open_position'][x] == 1 else stock_data_df['entry_price_x'][x] for x in stock_data_df.index] 
 stock_data_df['exit_price'] = [stock_data_df['exit_price_y'][x] if stock_data_df['open_position'][x] == 1 else stock_data_df['exit_price_x'][x] for x in stock_data_df.index] 
 stock_data_df.drop(columns=['exit_price_y','exit_price_x','entry_price_y', 'entry_price_x', 'Unnamed: 0'],inplace=True)
-#print(stock_data_df.loc[stock_data_df['ticker']=='DOW', ['date', 'ticker', 'close', 'record_count']].head(20))
 sf.to_csv_bulk(data=stock_data_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv')
 
 
