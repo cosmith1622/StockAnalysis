@@ -76,7 +76,7 @@ index_data_lists =[ sf.get_index_data
                          start_date = ticker_start_date,
                         #end_date = ticker_end_date,
                          outfile= x[1], 
-                         refreshFileOutput=True
+                         refreshFileOutput=False
                         )
                     for x in list_of_index
                   ]
@@ -89,7 +89,7 @@ index_data_df.reset_index(inplace=True)
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
-                        refresh_data=True,
+                        refresh_data=False,
                         index=x[0],
                         outputfile=x[1],
                         njobs=4, 
@@ -101,7 +101,7 @@ stock_data_lists = [ sf.get_ticker_jobs
 stock_data_df = pd.concat([pd.DataFrame(data=x) for x in stock_data_lists])
 etf_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=True,
+                     refresh_data=False,
                      index='ETF',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\etf_test.csv',
                      njobs=1,
@@ -109,7 +109,7 @@ etf_data_df = sf.get_ticker_jobs(
                  )
 other_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=True,
+                     refresh_data=False,
                      index='SPY',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\other_test.csv',
                      njobs=1,
@@ -120,7 +120,7 @@ gld_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\gld.csv', 
-                     refreshFileOutput=True
+                     refreshFileOutput=False
                    )
 gld_data_df.rename(columns={'ticker':'gold_index', 'close':'gold_close', 'date':'gold_date'}, inplace=True)
 gld_data_df =gld_data_df[['gold_index', 'gold_close', 'gold_date']]
@@ -129,7 +129,7 @@ sptl_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\sptl.csv',
-                     refreshFileOutput=True
+                     refreshFileOutput=False
                    )
 sptl_data_df.rename(columns={'ticker':'10_year_note_index', 'close':'10_year_note_close', 'date':'10_year_note_date'},inplace=True)
 sptl_data_df =sptl_data_df[['10_year_note_index', '10_year_note_close', '10_year_note_date']]
