@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,11,1)
+ticker_end_date = dt.date(2021,11,5)
 
 oil_df  = sf.get_reports()
 print(oil_df.tail(50))
