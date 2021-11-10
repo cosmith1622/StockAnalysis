@@ -25,6 +25,20 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
     else:
     
         index_table = get_data(ticker=ticker, start_date = start_date, end_date = end_date)
+        #if ticker =='NDX':
+        #    print(index_table.tail(50))
+        #    index_table.append(other=pd.DataFrame(data={'open':16024.13,
+        #                                                'high':16035.21,
+        #                                                'low':15836.68,
+        #                                                'close':15886.54,
+        #                                                'adjclose':15886.54,
+        #                                                'volume':5531330000,
+        #                                                'ticker':'NDX'
+        #                                               },index= ['2021-11-09']
+        #                                          )
+        #                       )
+                                                        #'index_data':'2021-11-09','ticker':'NDX', 'index_close':15866.54, 'index':544}))
+        #    print(index_table.tail(50))        
         index_table['previous_close'] = index_table['close'].shift(periods=1)
         index_table['pct_change'] = index_table['close'] / index_table['previous_close']
         index_table['natural_log'] = np.log(index_table['pct_change'])

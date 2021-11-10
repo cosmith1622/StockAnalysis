@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2021,11,5)
+ticker_end_date = dt.date(2021,11,9)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -97,7 +97,6 @@ stock_data_lists = [ sf.get_ticker_jobs
                     )   
                  for x in list_of_stock_prices
                ]
-
 stock_data_df = pd.concat([pd.DataFrame(data=x) for x in stock_data_lists])
 etf_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
