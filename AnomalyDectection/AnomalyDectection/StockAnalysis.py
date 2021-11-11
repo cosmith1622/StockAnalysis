@@ -16,8 +16,11 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,11,5)
+ticker_end_date = dt.date(2021,11,9)
 
+
+list_of_news = sf.get_news(ticker = 'HAL')
+list_of_opinions = sf.get_analysts_articles(ticker = 'HAL')
 oil_df  = sf.get_reports()
 print(oil_df.tail(50))
 sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\oil_prices.csv')

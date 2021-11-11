@@ -11,7 +11,19 @@ import html5lib as html
 import PandasExtra as pe
 import datapackage
 from fred import Fred
-from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other, get_stats_valuation, get_income_statement, get_stats
+from yahoo_fin.stock_info import (
+    get_analysts_info, 
+    get_company_info,
+    get_data, 
+    get_income_statement,
+    get_stats_valuation,
+    tickers_nasdaq,
+    tickers_sp500,
+    tickers_dow,
+    tickers_ftse250, 
+    tickers_other
+)
+from yahoo_fin.news import get_yf_rss
 from yahoo_finance_api2 import share
 from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
 from sklearn.model_selection import train_test_split
@@ -621,6 +633,20 @@ def get_vix_data():
             data = pd.read_csv(resource.descriptor['path'])
             
     return data
+
+
+def get_news(ticker : str):
+
+    articles = get_yf_rss(ticker)
+    data = pd.DataFrame(columns = ['date', 'summary', 'title'],
+                        data = [[x.published, x.summary, x.title] for x in articles]
+                       )
+    return data
+
+def get_analysts_articles(ticker : str):
+
+    articles = get_analysts_info(ticker = ticker)
+    return articles
 
 def get_reports():
 
