@@ -25,20 +25,20 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
     else:
     
         index_table = get_data(ticker=ticker, start_date = start_date, end_date = end_date)
-        #if ticker =='NDX':
-        #    print(index_table.tail(50))
-        #    index_table.append(other=pd.DataFrame(data={'open':16024.13,
-        #                                                'high':16035.21,
-        #                                                'low':15836.68,
-        #                                                'close':15886.54,
-        #                                                'adjclose':15886.54,
-        #                                                'volume':5531330000,
-        #                                                'ticker':'NDX'
-        #                                               },index= ['2021-11-09']
-        #                                          )
-        #                       )
-                                                        #'index_data':'2021-11-09','ticker':'NDX', 'index_close':15866.54, 'index':544}))
-        #    print(index_table.tail(50))        
+        if ticker =='NDX':
+            
+            index_table.dropna(subset=['close'], inplace=True)
+            index_table = index_table.append(other=pd.DataFrame(data={'open':16558.60,
+                                                        'high':16625.86,
+                                                        'low':16523.83,
+                                                        'close':16573.34,
+                                                        'adjclose':16573.34,
+                                                        'volume':784650982,
+                                                        'ticker':'NDX'
+                                                       },index= ['2021-11-19']
+                                                  )
+                               )
+                                                                       
         index_table['previous_close'] = index_table['close'].shift(periods=1)
         index_table['pct_change'] = index_table['close'] / index_table['previous_close']
         index_table['natural_log'] = np.log(index_table['pct_change'])
@@ -217,9 +217,9 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
 
 def get_min_max_scaler(df:pd.DataFrame):
 
-    ticker_start_date = dt.date(2019,12,1)
+    ticker_start_date = dt.date(2020,1,1)
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-    ticker_end_date = dt.date(2019,12,31)
+    ticker_end_date = dt.date(2020,1,31)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
     scaler = MinMaxScaler()
