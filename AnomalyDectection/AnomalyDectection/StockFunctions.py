@@ -30,6 +30,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
 from sklearn.decomposition import PCA
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=None, index_as_date: bool=False,refreshFileOutput: bool=False) ->pd.DataFrame:
 
@@ -641,6 +642,15 @@ def get_news(ticker : str):
     data = pd.DataFrame(columns = ['date', 'summary', 'title'],
                         data = [[x.published, x.summary, x.title] for x in articles]
                        )
+    return data
+
+
+def getSentiment(data):
+
+    vader = SentimentIntensityAnalyzer(lexicon_file = 'sentiment/vader_lexicon.zip/vader_lexicon/vader_lexicon.txt')
+    scores = data['summary'].apply(vader.polarity_scores).tolist()
+    scores_df = pd.DataFrame(scores)
+    data['scores'] = scores_df['compound']
     return data
 
 def get_analysts_articles(ticker : str):
