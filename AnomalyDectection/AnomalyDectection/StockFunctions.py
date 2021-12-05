@@ -28,14 +28,14 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
         if ticker =='NDX':
             
             index_table.dropna(subset=['close'], inplace=True)
-            index_table = index_table.append(other=pd.DataFrame(data={'open':16558.60,
-                                                        'high':16625.86,
-                                                        'low':16523.83,
-                                                        'close':16573.34,
-                                                        'adjclose':16573.34,
-                                                        'volume':784650982,
-                                                        'ticker':'NDX'
-                                                       },index= ['2021-11-19']
+            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(15791.30),
+                                                        'high':np.array(16066.32),
+                                                        'low':np.array(15770.92),
+                                                        'close':np.array(15990.76),
+                                                        'adjclose':np.array(15990.76),
+                                                        'volume':np.array(836181510),
+                                                        'ticker':np.array('NDX')
+                                                       },index= ['2021-12-02']
                                                   )
                                )
                                                                        
@@ -281,7 +281,7 @@ def get_company_info_with_exception(ticker:str)->pd.DataFrame:
     except:
 
         print('Unable to find company information for ' + ticker + '.')
-        return pd.DataFrame(data={'ticker':ticker},index=[0])
+        return pd.DataFrame(data={'ticker':np.array(ticker)},index=[0])
 
 def getPortfolio(df:pd.DataFrame):
 
@@ -306,8 +306,8 @@ def getPortfolio(df:pd.DataFrame):
 
 def getStockBeta(df:pd.DataFrame): 
 
-    print(df.tail(50))
     df.loc[:,'beta'] = df['market_corr'] * (df['rollingSTD'] / df['index_rolling_std'])
+    print(df.tail(50))
     #df['beta'] = df['market_corr'].copy() * (df['rollingSTD'].copy()/df['index_rolling_std'].copy())
     return df
 
@@ -402,20 +402,21 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
     try:
 
         best_fit, score, max_date,min_date,equity_DF,days = getLinearModel(df = df, number_of_days = number_of_days, ticker = ticker)
+        #linearmodeldf = pd.DataFrame(data =dict(security=np.array(ticker)),index = [0])
         linearmodeldf = pd.DataFrame(data =dict(
-                                                  security = ticker,
-                                                  max_date_time = max_date,                           
-                                                  score = score,
-                                                  intercept_ = best_fit.intercept_,
-                                                  coef_0 = best_fit.coef_[0],
-                                                  coef_1 = best_fit.coef_[1],
-                                                  coef_2 = best_fit.coef_[2],
-                                                  coef_3 = best_fit.coef_[3],
-                                                  coef_4 = best_fit.coef_[4],
-                                                  coef_5 = best_fit.coef_[5],
-                                                  coef_6 = best_fit.coef_[6],
-                                                  coef_7 = best_fit.coef_[7],
-                                                  coef_8 = best_fit.coef_[8],
+                                                  security = np.array(ticker),
+                                                  max_date_time = np.array(max_date),                           
+                                                  score = np.array(score),
+                                                  intercept_ = np.array(best_fit.intercept_),
+                                                  coef_0 = np.array(best_fit.coef_[0]),
+                                                  coef_1 = np.array(best_fit.coef_[1]),
+                                                  coef_2 = np.array(best_fit.coef_[2]),
+                                                  coef_3 = np.array(best_fit.coef_[3]),
+                                                  coef_4 = np.array(best_fit.coef_[4]),
+                                                  coef_5 = np.array(best_fit.coef_[5]),
+                                                  coef_6 = np.array(best_fit.coef_[6]),
+                                                  coef_7 = np.array(best_fit.coef_[7]),
+                                                  coef_8 = np.array(best_fit.coef_[8]),
                                                                     
                                                  )
                                                  ,index = [0]

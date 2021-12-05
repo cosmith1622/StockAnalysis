@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2021,11,19)
+ticker_end_date = dt.date(2021,12,3)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -90,7 +90,7 @@ index_data_df.reset_index(inplace=True)
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
-                        refresh_data=True,
+                        refresh_data=False,
                         index=x[0],
                         outputfile=x[1],
                         njobs=4, 
@@ -101,7 +101,7 @@ stock_data_lists = [ sf.get_ticker_jobs
 stock_data_df = pd.concat([pd.DataFrame(data=x) for x in stock_data_lists])
 etf_data_df = sf.get_ticker_jobs(
                      refresh_index=False,
-                     refresh_data=True,
+                     refresh_data=False,
                      index='ETF',
                      outputfile=r'c:\users\cosmi\onedrive\desktop\etf_test.csv',
                      njobs=1,
@@ -120,7 +120,7 @@ gld_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\gld.csv', 
-                     refreshFileOutput=True
+                     refreshFileOutput=False
                    )
 gld_data_df.rename(columns={'ticker':'gold_index', 'close':'gold_close', 'date':'gold_date'}, inplace=True)
 gld_data_df =gld_data_df[['gold_index', 'gold_close', 'gold_date']]
@@ -129,7 +129,7 @@ sptl_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\users\cosmi\onedrive\desktop\sptl.csv',
-                     refreshFileOutput=True
+                     refreshFileOutput=False
                    )
 sptl_data_df.rename(columns={'ticker':'10_year_note_index', 'close':'10_year_note_close', 'date':'10_year_note_date'},inplace=True)
 sptl_data_df =sptl_data_df[['10_year_note_index', '10_year_note_close', '10_year_note_date']]
@@ -149,7 +149,7 @@ stock_data_df.drop(columns='10_year_note_date',inplace=True)
 companies_info_df = sf.get_companies_info(
                         stock_data_df['ticker'].drop_duplicates(keep='first',inplace=False),
                         outfile=r'c:\users\cosmi\onedrive\desktop\companies_info_test.csv',
-                        refreshFileOutput=True
+                        refreshFileOutput=False
                         )
 stock_data_df = stock_data_df.merge(right=companies_info_df,how='left',on='ticker')
 
@@ -165,7 +165,7 @@ add the open position for real analysis
 
 """
 
-#stock_data_df = stock_data_df.loc[(stock_data_df['ticker']=='MOS') | (stock_data_df['ticker']=='DOW') ]
+#stock_data_df = stock_data_df.loc[(stock_data_df['ticker']=='HAL') | (stock_data_df['ticker']=='DOW') ]
 stock_data_df = stock_data_df.merge(right=stock_age_df,how='inner',on='ticker')
 stock_data_df = stock_data_df.loc[(stock_data_df['record_count']>= 240)]
 stock_data_df.sort_values(by=['ticker','date'], inplace=True)
@@ -175,10 +175,9 @@ stock_data_df['pctChange'] = stock_data_df['close'] / stock_data_df['previous_cl
 stock_data_df['naturalLog'] = np.log(stock_data_df['pctChange'])
 rolling_std_column = stock_data_df.groupby(by=['ticker'], as_index=False)['naturalLog'].rolling(20).std()
 stock_data_df['rollingSTD'] = rolling_std_column.reset_index(level=0, drop=True)
-one_week_std_column = (stock_data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(1).sum() * stock_data_df.groupby(by=['ticker'], as_index=False)['rollingSTD'].rolling(1).sum() * (np.sqrt(5))) / (np.sqrt(253))
-stock_data_df['oneweekstandarddeviationmove'] = one_week_std_column.reset_index(level=0, drop=True)
-two_week_std_column = (stock_data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(1).sum() * stock_data_df.groupby(by=['ticker'], as_index=False)['rollingSTD'].rolling(1).sum() * (np.sqrt(10))) / (np.sqrt(253))
-stock_data_df['twoweekstandarddeviationmove'] = two_week_std_column.reset_index(level=0, drop=True)
+stock_data_df['oneweekstandarddeviationmove'] = (stock_data_df['rollingSTD'] * np.sqrt(5)) * stock_data_df['close'] 
+stock_data_df['twoweekstandarddeviationmove'] =  (stock_data_df['rollingSTD'] * np.sqrt(10)) * stock_data_df['close']
+print(stock_data_df[['date', 'ticker', 'close', 'twoweekstandarddeviationmove']].tail(50))
 max_close_column = stock_data_df.groupby(by=['ticker'])['close'].rolling(200).max()
 max_close_df = pd.DataFrame(data=max_close_column)
 max_close_df.reset_index(level=0, inplace=True)
@@ -270,6 +269,7 @@ model_DF['max_date_time'] = model_DF['max_date_time'].apply(lambda x: dt.datetim
 stock_data_df = stock_data_df.merge(right=model_DF,how='left',left_on=['date','ticker'],right_on=['max_date_time','security'])
 stock_data_df.drop(labels='security', axis=1, inplace=True)
 stock_data_df.drop_duplicates(subset=['date','ticker'], inplace=True)
+stock_data_1_df = stock_data_df
 
 open_positions_df = sf.getOpenPositions(file = r'c:\users\cosmi\onedrive\desktop\portfolio.csv')
 stock_data_df = stock_data_df.merge(right=open_positions_df,how='left', left_on=['date','ticker'], right_on=['date','ticker'])
@@ -277,6 +277,13 @@ stock_data_df['entry_price'] = [stock_data_df['entry_price_y'][x] if stock_data_
 stock_data_df['exit_price'] = [stock_data_df['exit_price_y'][x] if stock_data_df['open_position'][x] == 1 else stock_data_df['exit_price_x'][x] for x in stock_data_df.index] 
 stock_data_df.drop(columns=['exit_price_y','exit_price_x','entry_price_y', 'entry_price_x', 'Unnamed: 0'],inplace=True)
 sf.to_csv_bulk(data=stock_data_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv')
+
+open_positions_1_df = sf.getOpenPositions(file = r'c:\users\cosmi\onedrive\desktop\portfolio_1.csv')
+stock_data_1_df = stock_data_1_df.merge(right=open_positions_1_df,how='left', left_on=['date','ticker'], right_on=['date','ticker'])
+stock_data_1_df['entry_price'] = [stock_data_1_df['entry_price_y'][x] if stock_data_1_df['open_position'][x] == 1 else stock_data_1_df['entry_price_x'][x] for x in stock_data_1_df.index] 
+stock_data_1_df['exit_price'] = [stock_data_1_df['exit_price_y'][x] if stock_data_1_df['open_position'][x] == 1 else stock_data_1_df['exit_price_x'][x] for x in stock_data_1_df.index] 
+stock_data_1_df.drop(columns=['exit_price_y','exit_price_x','entry_price_y', 'entry_price_x', 'Unnamed: 0'],inplace=True)
+sf.to_csv_bulk(data=stock_data_1_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\get_data_all_test_1.csv')
 
 
                 
