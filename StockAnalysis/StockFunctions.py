@@ -65,7 +65,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             list_of_arrays = np.array_split(sp500_tickers,njobs)
             param_list = [{'ticker':list(x['Symbol']),'start_date':start_date} for x in list_of_arrays]
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(get_tickers_data, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
+                futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
                 return_value = [f.result() for f in futures]
             df = pd.concat([pd.DataFrame(data=x)for x in return_value],sort=True)
             df = df.dropna()
@@ -78,7 +78,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             list_of_arrays = np.array_split(nasdaq_tickers,njobs)
             param_list = [{'ticker':list(x['Symbol']),'start_date':start_date} for x in list_of_arrays]
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(get_tickers_data, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
+                futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
                 return_value = [f.result() for f in futures]
             df = pd.concat([pd.DataFrame(data=x)for x in return_value],sort=True)
             df = df.dropna()
@@ -91,7 +91,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             list_of_arrays = np.array_split(dow_tickers,njobs)
             param_list = [{'ticker':list(x['Ticker']),'start_date':start_date} for x in list_of_arrays]
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(get_tickers_data, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
+                futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
                 return_value = [f.result() for f in futures]
             df = pd.concat([pd.DataFrame(data=x)for x in return_value],sort=True)
             df = df.dropna()
@@ -104,7 +104,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             list_of_arrays = np.array_split(dow_tickers,njobs)
             param_list = [{'ticker':list(x['Ticker']),'start_date':start_date} for x in list_of_arrays]
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(get_tickers_data, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
+                futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, ticker=param.get('ticker'),start_date=param.get('start_date')) for param in param_list]
                 return_value = [f.result() for f in futures]
             df = pd.concat([pd.DataFrame(data=x)for x in return_value],sort=True)
             df = df.dropna()
@@ -219,9 +219,9 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
 
 def get_min_max_scaler(df:pd.DataFrame):
 
-    ticker_start_date = dt.date(2019,12,1)
+    ticker_start_date = dt.date(2020,12,1)
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-    ticker_end_date = dt.date(2019,12,31)
+    ticker_end_date = dt.date(2020,12,31)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
     scaler = MinMaxScaler()
@@ -405,13 +405,13 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
 
         best_fit, score, max_date,min_date,equity_DF,days = getLinearModel(df = df, number_of_days = number_of_days, ticker = ticker)
         linearmodeldf = pd.DataFrame(data =dict(
-                                                  security = ticker,
-                                                  max_date_time = max_date,                           
-                                                  score = score,
-                                                  intercept_ = best_fit.intercept_,
-                                                  coef_0 = best_fit.coef_[0],
-                                                  coef_1 = best_fit.coef_[1],
-                                                  coef_2 = best_fit.coef_[2],
+                                                  security = np.array(ticker),
+                                                  max_date_time = np.array(max_date),                           
+                                                  score = np.array(score),
+                                                  intercept_ = np.array(best_fit.intercept_),
+                                                  coef_0 = np.array(best_fit.coef_[0]),
+                                                  coef_1 = np.array(best_fit.coef_[1]),
+                                                  coef_2 = np.array(best_fit.coef_[2]),
                                                  # coef_3 = best_fit.coef_[3],
                                                  #coef_4 = best_fit.coef_[4],
                                                  #coef_5 = best_fit.coef_[5],
@@ -657,6 +657,12 @@ def get_analysts_articles(ticker : str):
 
     articles = get_analysts_info(ticker = ticker)
     return articles
+
+def getOilPrices(start_date : str, end_date : str):
+
+    df = get_data(ticker = 'CL=F', start_date = start_date, end_date = end_date)
+    return df
+
 
 #def get_reports():
 

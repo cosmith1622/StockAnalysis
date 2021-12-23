@@ -16,36 +16,50 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,11,19)
+ticker_end_date = dt.date(2021,12,22)
 
-dollar = sf.get_tickers_data_yahoo_finance_yahoo_2(symbol ='EURUSD=X' )
-list_of_news = sf.get_news(ticker = 'HAL')
-print(list_of_news)
-data = sf.getSentiment(list_of_news)
-print(data)
-#list_of_opinions = sf.get_analysts_articles(ticker = 'HAL')
-oil_df  = sf.get_reports()
+#dollar = sf.get_tickers_data_yahoo_finance_yahoo_2(symbol ='EURUSD=X' )
+#list_of_news = sf.get_news(ticker = 'HAL')
+#print(list_of_news)
+#data = sf.getSentiment(list_of_news)
+#print(data)
+#list_of_opinio
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#oil_df  = sf.get_reports()
+oil_df =  sf.getOilPrices(ticker_start_date, ticker_end_date)
+oil_df.reset_index(level = 0, inplace = True)
+oil_df.rename(columns={'index':'date'}, inplace = True)
+oil_df['date'] = oil_df['date'].apply(lambda x: dt.datetime.strftime(x, '%Y-%m-%d'))
+print(oil_df['date'].dtype)
 print(oil_df.tail(50))
-sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\oil_prices.csv')
-companies_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\companies_info_test.csv',file_size = 1000000000,chunk_count = 100000)
+sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\investment_data\oil_prices.csv')
+companies_df = sf.read_csv_bulk(input_file =  r'c:\investment_data\companies_info.csv',file_size = 1000000000,chunk_count = 100000)
 companies_df = companies_df[['ticker','industry']]
-vix_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\vix_data.csv',file_size = 1000000000,chunk_count = 100000)
-vix_df = vix_df[['date', 'close']]
-spy_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\spy500_test.csv',file_size = 1000000000,chunk_count = 100000)
-etf_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\etf_test.csv',file_size = 1000000000,chunk_count = 100000)
+#vix_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\vix_data.csv',file_size = 1000000000,chunk_count = 100000)
+#vix_df = vix_df[['date', 'close']]
+#spy_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\spy500_test.csv',file_size = 1000000000,chunk_count = 100000)
+#etf_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\etf_test.csv',file_size = 1000000000,chunk_count = 100000)
 #oil_df = etf_df.loc[etf_df['ticker']=='USO']
-#oil_df = oil_df[['date', 'close']]
-energy_df = etf_df.loc[etf_df['ticker']=='XLE']
-energy_df = energy_df[['date', 'close']]
-data_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
+oil_df = oil_df[['date', 'close']]
+#energy_df = etf_df.loc[etf_df['ticker']=='XLE']
+#energy_df = energy_df[['date', 'close']]
+data_df = sf.read_csv_bulk(input_file =  r'c:\investment_data\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
 #data_df = data_df.loc[data_df['ticker']=='HAL']
 data_df = data_df[['close','ticker','date', 'distanceAboveTwentyDayMVA','distanceBelowTwentyDayMVA','twentyDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
-data_df = data_df.merge(right=vix_df,how='inner', on='date')
-data_df.rename(columns={"close_x": "close", "close_y": "vix_close"}, inplace = True)
+#data_df = data_df.merge(right=vix_df,how='inner', on='date')
+#data_df.rename(columns={"close_x": "close", "close_y": "vix_close"}, inplace = True)
 data_df = data_df.merge(right=oil_df,how='left', on='date')
-data_df.rename(columns={"close_x": "close"}, inplace = True)
-data_df = data_df.merge(right=energy_df,how='inner', on='date')
-data_df.rename(columns={"close_x": "close", "close_y": "energy_close"}, inplace = True)
+data_df.rename(columns={"close_x": "close", "close_y" : "oil_price"}, inplace = True)
+#data_df = data_df.merge(right=energy_df,how='inner', on='date')
+#data_df.rename(columns={"close_x": "close", "close_y": "energy_close"}, inplace = True)
 data_df = data_df.merge(right=companies_df,how='inner', on='ticker')
 data_df = data_df.loc[data_df['industry']== 'Oil & Gas Equipment & Services']
 distance_from_20_day = [1 if data_df['close'][record] > data_df['twentyDayMVA'][record] else 0 for record in data_df.index]
@@ -62,7 +76,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
      return_value = [f.result() for f in futures]
 
 model_DF = pd.concat([pd.DataFrame(data=x)for x in return_value])
-sf.to_csv_bulk(data=model_DF,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\users\cosmi\onedrive\desktop\model_test.csv')
+sf.to_csv_bulk(data=model_DF,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\investment_data\model_test.csv')
 #data = sf.get_ticker_jobs(
  #                       refresh_index = False,
  #                       refresh_data=False,
