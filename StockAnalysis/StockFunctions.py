@@ -28,14 +28,14 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
         if ticker =='NDX':
             
             index_table.dropna(subset=['close'], inplace=True)
-            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(15791.30),
-                                                        'high':np.array(16066.32),
-                                                        'low':np.array(15770.92),
-                                                        'close':np.array(15990.76),
-                                                        'adjclose':np.array(15990.76),
-                                                        'volume':np.array(836181510),
+            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(15963.50),
+                                                        'high':np.array(16186.25 ),
+                                                        'low':np.array(15947.56),
+                                                        'close':np.array(16180.14),
+                                                        'adjclose':np.array(16180.14),
+                                                        'volume':np.array(636261954),
                                                         'ticker':np.array('NDX')
-                                                       },index= ['2021-12-02']
+                                                       },index= ['2021-12-22']
                                                   )
                                )
                                                                        
