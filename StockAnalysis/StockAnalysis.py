@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2021,12,22)
+ticker_end_date = dt.date(2021,12,27)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -76,7 +76,7 @@ index_data_lists =[ sf.get_index_data
                          start_date = ticker_start_date,
                         #end_date = ticker_end_date,
                          outfile= x[1], 
-                         refreshFileOutput=False
+                         refreshFileOutput=True
                         )
                     for x in list_of_index
                   ]
@@ -120,7 +120,7 @@ gld_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\investment_data\gld.csv', 
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
 gld_data_df.rename(columns={'ticker':'gold_index', 'close':'gold_close', 'date':'gold_date'}, inplace=True)
 gld_data_df =gld_data_df[['gold_index', 'gold_close', 'gold_date']]
@@ -129,7 +129,7 @@ sptl_data_df = sf.get_index_data(
                      start_date = ticker_start_date,
                      #end_date = ticker_end_date,
                      outfile=r'c:\investment_data\sptl.csv',
-                     refreshFileOutput=False
+                     refreshFileOutput=True
                    )
 sptl_data_df.rename(columns={'ticker':'10_year_note_index', 'close':'10_year_note_close', 'date':'10_year_note_date'},inplace=True)
 sptl_data_df =sptl_data_df[['10_year_note_index', '10_year_note_close', '10_year_note_date']]
@@ -237,8 +237,10 @@ keep all the dates in the get data all csv
 we currently have in our portfolio
 
 """
-
 open_positions_df = sf.getOpenPositions(file = r'c:\users\cosmi\onedrive\desktop\portfolio.csv')
+open_positions_df1 = sf.getOpenPositions(file = r'c:\users\cosmi\onedrive\desktop\portfolio_1.csv')
+open_positions_df = open_positions_df.append(other = open_positions_df1, ignore_index = True)
+open_positions_df.drop_duplicates(subset=['ticker'], inplace=True)
 stock_data_df = stock_data_df.merge(right=open_positions_df,how='left',left_on=['ticker','date'],right_on=['ticker', 'date'])
 stock_data_df.drop(labels=['Unnamed: 0','entry_price', 'current_price', 'exit_price', 'quantity'], axis = 1, inplace=True)
 stock_data_df_max = stock_data_df.loc[(stock_data_df['date'] == ticker_end_date.strftime('%Y-%m-%d')) & (stock_data_df['close'] <= 120) & (stock_data_df['volume'].astype('int64') >= 1000000) | (stock_data_df['open_position']==1)]
