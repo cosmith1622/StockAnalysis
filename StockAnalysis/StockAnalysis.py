@@ -16,9 +16,11 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,13)
-ticker_end_date = dt.date(2021,12,22)
-
-#dollar = sf.get_tickers_data_yahoo_finance_yahoo_2(symbol ='EURUSD=X' )
+ticker_end_date = dt.date(2021,12,27)
+cpi_df = sf.get_reports()
+dollar_df = sf.get_tickers_data_yahoo_finance_yahoo_2(symbol ='EURUSD=X' )
+dollar_df = dollar_df[['date', 'close']]
+dollar_df['date'] = dollar_df['date'].apply(lambda x: dt.datetime.strftime(x, '%Y-%m-%d'))
 #list_of_news = sf.get_news(ticker = 'HAL')
 #print(list_of_news)
 #data = sf.getSentiment(list_of_news)
@@ -38,8 +40,6 @@ oil_df =  sf.getOilPrices(ticker_start_date, ticker_end_date)
 oil_df.reset_index(level = 0, inplace = True)
 oil_df.rename(columns={'index':'date'}, inplace = True)
 oil_df['date'] = oil_df['date'].apply(lambda x: dt.datetime.strftime(x, '%Y-%m-%d'))
-print(oil_df['date'].dtype)
-print(oil_df.tail(50))
 sf.to_csv_bulk(data=oil_df,df_size = 1000000,chunk_count=100000,refreshOutput=True,outputfile = r'c:\investment_data\oil_prices.csv')
 companies_df = sf.read_csv_bulk(input_file =  r'c:\investment_data\companies_info.csv',file_size = 1000000000,chunk_count = 100000)
 companies_df = companies_df[['ticker','industry']]
@@ -49,27 +49,33 @@ companies_df = companies_df[['ticker','industry']]
 #etf_df = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\etf_test.csv',file_size = 1000000000,chunk_count = 100000)
 #oil_df = etf_df.loc[etf_df['ticker']=='USO']
 oil_df = oil_df[['date', 'close']]
+print(oil_df.tail(50))
 #energy_df = etf_df.loc[etf_df['ticker']=='XLE']
 #energy_df = energy_df[['date', 'close']]
 data_df = sf.read_csv_bulk(input_file =  r'c:\investment_data\get_data_all_test.csv',file_size = 1000000000,chunk_count = 100000)
 #data_df = data_df.loc[data_df['ticker']=='HAL']
-data_df = data_df[['close','ticker','date', 'distanceAboveTwentyDayMVA','distanceBelowTwentyDayMVA','twentyDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
+rolling_average_column = data_df.groupby(by=['ticker'], as_index=False)['close'].rolling(8).mean()
+data_df['eightDayMVA'] = rolling_average_column.reset_index(level=0, drop=True)
+data_df = data_df[['close','ticker','date', 'distanceAboveTwentyDayMVA','distanceBelowTwentyDayMVA','eightDayMVA', 'fiftyDayMVA', 'index_close', 'volume']]
 #data_df = data_df.merge(right=vix_df,how='inner', on='date')
 #data_df.rename(columns={"close_x": "close", "close_y": "vix_close"}, inplace = True)
 data_df = data_df.merge(right=oil_df,how='left', on='date')
 data_df.rename(columns={"close_x": "close", "close_y" : "oil_price"}, inplace = True)
+data_df = data_df.merge(right=dollar_df, how='left', on='date')
+data_df.rename(columns={"close_x": "close", "close_y" : "dollar_price"}, inplace = True)
 #data_df = data_df.merge(right=energy_df,how='inner', on='date')
 #data_df.rename(columns={"close_x": "close", "close_y": "energy_close"}, inplace = True)
 data_df = data_df.merge(right=companies_df,how='inner', on='ticker')
 data_df = data_df.loc[data_df['industry']== 'Oil & Gas Equipment & Services']
-distance_from_20_day = [1 if data_df['close'][record] > data_df['twentyDayMVA'][record] else 0 for record in data_df.index]
+distance_from_20_day = [1 if data_df['close'][record] > data_df['eightDayMVA'][record] else 0 for record in data_df.index]
 data_df.loc[:, 'distance'] = distance_from_20_day
 #print(data_df.loc[data_df['ticker']=='BKR',['date','ticker', 'close', 'twentyDayMVA', 'distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA', 'distance']].tail(50))
 #variable_df = sf.featureSelection(df = data_df, number_of_days = 45, ticker = 'BKR')
 #model_df = sf.getLinearModel(df = data_df, number_of_days = 45, ticker = 'HAL')
 #model_df = sf.getSecurityLinearModels(df = data, number_of_days = 45, ticker = 'DOW')
 list_of_tickers = data_df['ticker'].drop_duplicates(keep='first',inplace=False)
-dateTuple = (45,)
+print(data_df[['date', 'ticker','close', 'oil_price', 'dollar_price']].tail(50))
+dateTuple = (200,)
 param_list = [{'number_of_days':x} for x in dateTuple]
 with concurrent.futures.ThreadPoolExecutor() as executor:
      futures = [executor.submit(sf.getSecurityLinearModels , df=data_df.loc[data_df['ticker']==ticker],number_of_days=param.get('number_of_days'), ticker=ticker) for ticker in list_of_tickers for param in param_list]

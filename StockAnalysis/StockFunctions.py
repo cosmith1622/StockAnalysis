@@ -10,7 +10,7 @@ import requests_html as request
 import html5lib as html
 import PandasExtra as pe
 #import datapackage
-#from fred import Fred
+from fred import Fred
 from yahoo_fin.stock_info import (
     get_analysts_info, 
     get_company_info,
@@ -411,7 +411,7 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
                                                   intercept_ = np.array(best_fit.intercept_),
                                                   coef_0 = np.array(best_fit.coef_[0]),
                                                   coef_1 = np.array(best_fit.coef_[1]),
-                                                  coef_2 = np.array(best_fit.coef_[2]),
+                                                 # coef_2 = np.array(best_fit.coef_[2]),
                                                  # coef_3 = best_fit.coef_[3],
                                                  #coef_4 = best_fit.coef_[4],
                                                  #coef_5 = best_fit.coef_[5],
@@ -454,7 +454,7 @@ def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
     try:
  
         #df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA','fiftyDayMVA', 'volume','10_year_note_close', 'index_close', 'gold_close', 'vix_close', 'energy_close']].copy()
-        df = df[['date','ticker', 'close', 'industry', 'twentyDayMVA', 'oil_price','distance']]
+        df = df[['date','ticker', 'close', 'industry', 'dollar_price','oil_price']]
         df['date'] =  pd.to_datetime(arg=df['date']).dt.date 
         df = df.loc[df['ticker'] == ticker]
         df = df.tail(number_of_days)
@@ -462,6 +462,8 @@ def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
         min_date = df['date'].min()
         mean_oil_price = df['oil_price'].mean()
         df['oil_price'].fillna(mean_oil_price,inplace=True)
+        mean_dollar_price = df['dollar_price'].mean()
+        df['dollar_price'].fillna(mean_dollar_price,inplace=True)
         print(df.tail(50))
         df.dropna(inplace=True)
         X = np.array(df.drop(['close','ticker','date','industry'],axis = 1))
@@ -661,6 +663,20 @@ def get_analysts_articles(ticker : str):
 def getOilPrices(start_date : str, end_date : str):
 
     df = get_data(ticker = 'CL=F', start_date = start_date, end_date = end_date)
+    return df
+
+def get_reports():
+
+    fr = Fred(api_key = '8e6c689925a7564c2e3aeeccf29b71f7',response_type='json')
+    df = fr.series.search(search_text = ' Consumer Price Index for All Urban Consumers: All Items in U.S. City Average') 
+    df = fr.series.observations(series_id='CPIAUCSL')
+    df = pd.read_json(df)
+    data_df = pd.concat([pd.DataFrame(data = record[12], index = [0] ) for record in df._values])
+    start_date = dt.date(2019,1,1)
+    data_df = data_df.loc[data_df['date'] >= start_date.strftime('%Y-%m-%d')]
+    data_df = data_df.loc[:, ['date', 'value']]
+    cpi_price = [int(72) if record[1] == '.' else round(float(record[1]),2) for record in data_df._values]
+    data_df.drop(labels = ['value'], axis = 1, inplace = True)
     return df
 
 
