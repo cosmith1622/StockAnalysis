@@ -16,7 +16,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2021,12,27)
+ticker_end_date = dt.date(2022,1,12)
 
 #data = sf.read_csv_bulk(input_file =  r'c:\users\cosmi\onedrive\desktop\sp500_test.csv',file_size = 1000000000,chunk_count = 100000)
 #sf.featureSelection(df = data, ticker = 'HAL')
@@ -76,7 +76,7 @@ index_data_lists =[ sf.get_index_data
                          start_date = ticker_start_date,
                         #end_date = ticker_end_date,
                          outfile= x[1], 
-                         refreshFileOutput=True
+                         refreshFileOutput=False
                         )
                     for x in list_of_index
                   ]
@@ -90,7 +90,7 @@ print(index_data_df.loc[index_data_df['ticker']=='NDX'].tail(50))
 stock_data_lists = [ sf.get_ticker_jobs
                     (
                         refresh_index = False,
-                        refresh_data=True,
+                        refresh_data=False,
                         index=x[0],
                         outputfile=x[1],
                         njobs=4, 
@@ -149,7 +149,7 @@ stock_data_df.drop(columns='10_year_note_date',inplace=True)
 companies_info_df = sf.get_companies_info(
                         stock_data_df['ticker'].drop_duplicates(keep='first',inplace=False),
                         outfile=r'c:\investment_data\companies_info.csv',
-                        refreshFileOutput=True
+                        refreshFileOutput=False
                         )
 stock_data_df = stock_data_df.merge(right=companies_info_df,how='left',on='ticker')
 
@@ -243,11 +243,14 @@ open_positions_df = open_positions_df.append(other = open_positions_df1, ignore_
 open_positions_df.drop_duplicates(subset=['ticker'], inplace=True)
 stock_data_df = stock_data_df.merge(right=open_positions_df,how='left',left_on=['ticker','date'],right_on=['ticker', 'date'])
 stock_data_df.drop(labels=['Unnamed: 0','entry_price', 'current_price', 'exit_price', 'quantity'], axis = 1, inplace=True)
+print(stock_data_df.tail(50))
 stock_data_df_max = stock_data_df.loc[(stock_data_df['date'] == ticker_end_date.strftime('%Y-%m-%d')) & (stock_data_df['close'] <= 120) & (stock_data_df['volume'].astype('int64') >= 1000000) | (stock_data_df['open_position']==1)]
+print(stock_data_df.tail(50))
 stock_data_df.drop(labels=['open_position'],axis = 1, inplace = True)
 stock_data_df_max.drop_duplicates(subset=['ticker'], inplace=True)
 stock_data_df_max.to_csv(r'c:\investment_data\get_data_max_date.csv')
 list_of_tickers = stock_data_df_max['ticker'].drop_duplicates(keep='first',inplace=False)
+print(list_of_tickers._values)
 stock_data_df = pd.concat([pd.DataFrame(data=stock_data_df.loc[stock_data_df['ticker'] == x]) for x in list_of_tickers._values])
 stock_data_df = sf.get_min_max_scaler(df=stock_data_df)
 portfolio_df = sf.getPortfolio(df=stock_data_df[['date','ticker','close','index','index_close', 'priceTarget', 'rollingSTD', 'index_rolling_std', 'oneweekstandarddeviationmove', 'twoweekstandarddeviationmove', 'sector', 'industry']])

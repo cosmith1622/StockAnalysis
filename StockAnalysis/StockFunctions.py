@@ -28,14 +28,14 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
         if ticker =='NDX':
             
             index_table.dropna(subset=['close'], inplace=True)
-            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(16361.10),
-                                                        'high':np.array(16567.64 ),
-                                                        'low':np.array(16361.07),
-                                                        'close':np.array(16567.50),
-                                                        'adjclose':np.array(16567.50),
-                                                        'volume':np.array(572149301),
+            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(15955.50),
+                                                        'high':np.array(16017.39 ),
+                                                        'low':np.array(15815.95),
+                                                        'close':np.array(15905.10),
+                                                        'adjclose':np.array(15905.10),
+                                                        'volume':np.array(699526181),
                                                         'ticker':np.array('NDX')
-                                                       },index= ['2021-12-27']
+                                                       },index= ['2022-1-12']
                                                   )
                                )
                                                                        
@@ -217,16 +217,16 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
 
 def get_min_max_scaler(df:pd.DataFrame):
 
-    ticker_start_date = dt.date(2020,1,1)
+    ticker_start_date = dt.date(2021,1,1)
     ticker_start_date_string = ticker_start_date.strftime('%Y-%m-%d')
-    ticker_end_date = dt.date(2020,1,31)
+    ticker_end_date = dt.date(2021,1,31)
     ticker_end_date_string = ticker_end_date.strftime('%Y-%m-%d')
     df_fit = df.loc[(df['date']>=ticker_start_date_string) & (df['date']<=ticker_end_date_string)]
     scaler = MinMaxScaler()
     scaler.fit(df_fit[['distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA']])
     adjusted_values = scaler.transform(df[['distanceAboveTwentyDayMVA', 'distanceBelowTwentyDayMVA']])
-    df['distanceAboveTwentyDayMVAAdjusted'] = adjusted_values[:,0]#return_list[0][0]._values 
-    df['distanceBelowTwentyDayMVAAdjusted'] = adjusted_values[:,1]#return_list[0][1]._values
+    df['distanceAboveTwentyDayMVAAdjusted'] = adjusted_values[:,0]
+    df['distanceBelowTwentyDayMVAAdjusted'] = adjusted_values[:,1]
     return df
 
 #return the current quote and append it to the price history list
