@@ -15,6 +15,7 @@ load data
 
 """
 
+stats = sf.get_company_stats(ticker = 'CSX')
 ticker_start_date = dt.date(2019,9,13)
 ticker_end_date = dt.date(2021,12,27)
 cpi_df = sf.get_reports()

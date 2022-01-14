@@ -604,6 +604,11 @@ def get_ratios(ticker:str):
 
         print(err)
 
+def get_company_stats(ticker: str):
+
+    df = get_stats_valuation(ticker = ticker)
+    pe = [record[1] for record in df._values if record[0] == 'Forward P/E' ]
+    return df
 
 def get_income_statement_data(ticker: str, yearly:bool = True):
 
