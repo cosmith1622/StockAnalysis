@@ -670,38 +670,4 @@ def getOilPrices(start_date : str, end_date : str):
     df = get_data(ticker = 'CL=F', start_date = start_date, end_date = end_date)
     return df
 
-def get_reports():
-
-    fr = Fred(api_key = '8e6c689925a7564c2e3aeeccf29b71f7',response_type='json')
-    df = fr.series.search(search_text = ' Consumer Price Index for All Urban Consumers: All Items in U.S. City Average') 
-    df = fr.series.observations(series_id='CPIAUCSL')
-    df = pd.read_json(df)
-    data_df = pd.concat([pd.DataFrame(data = record[12], index = [0] ) for record in df._values])
-    start_date = dt.date(2019,1,1)
-    data_df = data_df.loc[data_df['date'] >= start_date.strftime('%Y-%m-%d')]
-    data_df = data_df.loc[:, ['date', 'value']]
-    cpi_price = [int(72) if record[1] == '.' else round(float(record[1]),2) for record in data_df._values]
-    data_df.drop(labels = ['value'], axis = 1, inplace = True)
-    return df
-
-
-#def get_reports():
-
-#    fr = Fred(api_key = '8e6c689925a7564c2e3aeeccf29b71f7',response_type='json')
-#    #df = fr.series.search(search_text = 'Unemployment Rate US')
-#   df = fr.series.search(search_text = 'Crude Oil Prices: West Texas Intermediate (WTI)')
-#    df = pd.read_json(df)
-    #param = {'frequency':'Monthly','observation_start':'2019-09-01','observation_end':'2021-10-30' }
-    #df = fr.series.observations(series_id='UNRATE')
-#    df = fr.series.observations(series_id='DCOILWTICO')
-#    df = pd.read_json(df)
-#    data_df = pd.concat([pd.DataFrame(data = record[12], index = [0] ) for record in df._values])
-#    ticker_end_date = dt.date(2021,8,15)
-#    data_df = data_df.loc[data_df['date'] >= ticker_end_date.strftime('%Y-%m-%d')]
-#    data_df = data_df.loc[:, ['date', 'value']]
-#    oil_price = [int(72) if record[1] == '.' else round(float(record[1]),2) for record in data_df._values]
-#    data_df.loc[:, 'oil_price'] = oil_price
-#    data_df.drop(labels = ['value'], axis = 1, inplace = True)
-#    return data_df
-        
 
