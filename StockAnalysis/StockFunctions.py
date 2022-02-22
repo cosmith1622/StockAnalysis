@@ -6,15 +6,17 @@ import sys
 import concurrent.futures
 import os
 from os import path, remove
+from pandas.core.indexes import period
 import requests_html as request
 import html5lib as html
 import PandasExtra as pe
 from yahoo_fin.stock_info import get_data, get_company_info, tickers_nasdaq,tickers_sp500,tickers_dow,tickers_ftse250, tickers_other
 from yahoo_finance_api2 import share
-from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale
+from sklearn.preprocessing import MinMaxScaler,StandardScaler,scale,LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
+from sklearn import tree
 
 def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=None, index_as_date: bool=False,refreshFileOutput: bool=False) ->pd.DataFrame:
 
@@ -24,21 +26,7 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
 
     else:
     
-        index_table = get_data(ticker=ticker, start_date = start_date, end_date = end_date)
-        if ticker =='NDX':
-            
-            index_table.dropna(subset=['close'], inplace=True)
-            index_table = index_table.append(other=pd.DataFrame(data={'open': np.array(15955.50),
-                                                        'high':np.array(16017.39 ),
-                                                        'low':np.array(15815.95),
-                                                        'close':np.array(15905.10),
-                                                        'adjclose':np.array(15905.10),
-                                                        'volume':np.array(699526181),
-                                                        'ticker':np.array('NDX')
-                                                       },index= ['2022-1-12']
-                                                  )
-                               )
-                                                                       
+        index_table = get_data(ticker=ticker, start_date = start_date, end_date = end_date)                                   
         index_table['previous_close'] = index_table['close'].shift(periods=1)
         index_table['pct_change'] = index_table['close'] / index_table['previous_close']
         index_table['natural_log'] = np.log(index_table['pct_change'])
@@ -57,7 +45,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
     #update index and data
     if refresh_index == True:
 
-        if index == "SPY":
+        if index == "^GSPC":
         
             sp500_tickers = get_tickers_sp500(outfile =r'c:\users\cosmi\onedrive\desktop\sp500_tickers.csv',refreshFileOutput=True)
             list_of_arrays = np.array_split(sp500_tickers,njobs)
@@ -70,7 +58,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000,refreshOutput=refresh_data,outputfile=r'c:\users\cosmi\onedrive\desktop\sp500.csv')
 
 
-        elif index == "NDX":
+        elif index == "^IXIC":
 
             nasdaq_tickers = get_tickers_nasdaq(outfile =r'c:\users\cosmi\onedrive\desktop\nasdaq_tickers.csv',refreshFileOutput=True)
             list_of_arrays = np.array_split(nasdaq_tickers,njobs)
@@ -82,7 +70,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             df = df.dropna()
             to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000, refreshOutput=refresh_data,outputfile=r'c:\users\cosmi\onedrive\desktop\nasdaq.csv')
       
-        elif index == "DIA": 
+        elif index == "^DJI": 
         
             dow_tickers = get_tickers_dow(outfile =r'c:\users\cosmi\onedrive\desktop\dow_tickers.csv',refreshFileOutput=True)
             dow_tickers.rename(columns={"Symbol":"Ticker"}, inplace=True)
@@ -112,7 +100,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
     
     elif refresh_data == True:
 
-        if index == "SPY":  
+        if index == "^GSPC":  
             
             sp500_tickers = pd.read_csv(filepath_or_buffer =r'c:\users\cosmi\onedrive\desktop\sp500_tickers.csv')
             sp500_tickers.rename(columns={'Symbol':'ticker'},inplace=True)
@@ -133,7 +121,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             df = df.dropna()
             to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000,refreshOutput=refresh_data,outputfile=outputfile)
 
-        elif index == "NDX":
+        elif index == "^IXIC":
 
             nasdaq_tickers = pd.read_csv(filepath_or_buffer =r'c:\users\cosmi\onedrive\desktop\nasdaq_tickers.csv')
             nasdaq_tickers.rename(columns={'Symbol':'ticker'},inplace=True)
@@ -153,7 +141,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
             df = df.dropna()
             to_csv_bulk(data=df,df_size=1000000,chunk_count=1000000, refreshOutput=refresh_data,outputfile=outputfile)
 
-        elif index == "DIA":
+        elif index == "^DJI":
 
             dow_tickers = pd.read_csv(filepath_or_buffer =r'c:\users\cosmi\onedrive\desktop\dow_tickers.csv')
             dow_tickers.rename(columns={"Symbol":"ticker"},inplace=True)
@@ -196,7 +184,7 @@ def get_ticker_jobs(refresh_index: bool, refresh_data:bool, outputfile:str, inde
         elif index == 'Other':
 
             other_tickers = pd.read_csv(filepath_or_buffer =r'c:\users\cosmi\onedrive\desktop\other_tickers.csv')
-            other_tickers.rename(columns={"Symbol":"ticker"},inplace=True)
+            other_tickers.rename(columns={"ACT Symbol":"ticker"},inplace=True)
             other_tickers = list(other_tickers['ticker'])
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [executor.submit(get_tickers_data_yahoo_finance_yahoo_2, symbol = ticker) for ticker in other_tickers]
@@ -413,10 +401,10 @@ def getSecurityLinearModels(df: pd.DataFrame, number_of_days: int, ticker: str) 
                                                   coef_2 = np.array(best_fit.coef_[2]),
                                                   coef_3 = np.array(best_fit.coef_[3]),
                                                   coef_4 = np.array(best_fit.coef_[4]),
-                                                  coef_5 = np.array(best_fit.coef_[5]),
-                                                  coef_6 = np.array(best_fit.coef_[6]),
-                                                  coef_7 = np.array(best_fit.coef_[7]),
-                                                  coef_8 = np.array(best_fit.coef_[8]),
+                                                 # coef_5 = np.array(best_fit.coef_[5]),
+                                                 # coef_6 = np.array(best_fit.coef_[6]),
+                                                 # coef_7 = np.array(best_fit.coef_[7]),
+                                                 # coef_8 = np.array(best_fit.coef_[8]),
                                                                     
                                                  )
                                                  ,index = [0]
@@ -451,7 +439,7 @@ def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
 
     try:
  
-        df = df[['date','ticker', 'close', 'twentyDayMVA','fiftyDayMVA', 'open', 'high', 'low', 'volume','10_year_note_close', 'index_close', 'gold_close', 'beta']].copy()
+        df = df[['date','ticker', 'close', 'twentyDayMVA', 'open', 'high', 'low', 'volume', 'index_close']].copy()
         #df = df[['date','ticker', 'close', 'open', 'high', 'low']].copy()
         df['date'] =  pd.to_datetime(arg=df['date']).dt.date 
         df = df.loc[df['ticker'] == ticker]
@@ -474,6 +462,37 @@ def getLinearModel(df: pd.DataFrame, number_of_days: int, ticker: str):
     except Exception as err:
 
         print(err)
+
+def backtestDecisionTree (data:pd.DataFrame):
+
+   
+    data['year'] = pd.DatetimeIndex(data['date']).year
+    data['month'] = pd.DatetimeIndex(data['date']).month
+    data['belowEntry'] = data['close'] <= data['entry_price']
+    data['futureCloseMax'] = data.groupby(by=['ticker'])['close'].transform(lambda x: x.rolling(3).max().shift(-23))
+    predict_data = data.copy()
+    max_date = data['date'].max()
+    data = data[['date','ticker', 'close', 'aboveTwentyDayMVA', 'aboveFiftyDayMVA','entry_price', 'futureClose', 'belowEntry', 'futureCloseMax', 'year', 'month']]
+    print(data[['date', 'ticker', 'close', 'entry_price', 'futureCloseMax']].tail(50))
+    data.dropna(subset=['futureCloseMax', 'entry_price'],inplace=True)
+    data['abovefutureClose'] = data['close'] <= data['futureCloseMax']
+    le_twenty_day = LabelEncoder()
+    le_fifty_day = LabelEncoder()
+    le_below_entry = LabelEncoder()
+    data['aboveTwentyDayMVATransform'] = le_twenty_day.fit_transform(data['aboveTwentyDayMVA'])
+    data['aboveFiftyDayMVATransform'] = le_fifty_day.fit_transform(data['aboveFiftyDayMVA'])
+    data['belowEntryTransform'] = le_fifty_day.fit_transform(data['belowEntry'])
+    X = data[['aboveTwentyDayMVA','aboveFiftyDayMVA','belowEntry']].to_numpy()
+    y = np.array(data['abovefutureClose'])
+    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=.3, train_size=.7)
+    clf = tree.DecisionTreeClassifier(criterion = 'gini')
+    clf = clf.fit(X_train, y_train)
+    predict_data = predict_data.loc[predict_data['date']==max_date]
+    X_current = predict_data[['aboveTwentyDayMVA','aboveFiftyDayMVA','belowEntry']].to_numpy()
+    y_hats = clf.predict(X = X_current)
+    predict_data['prediction'] = y_hats
+    predict_data = predict_data[['date', 'ticker', 'prediction']]
+    return predict_data
 
 def getOpenPositions(file:str):
 
