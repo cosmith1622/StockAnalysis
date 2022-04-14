@@ -37,6 +37,7 @@ def get_index_data(ticker: str,start_date: str, end_date: str=None,outfile: str=
         index_table.drop(labels=['previous_close', 'pct_change', 'natural_log'], axis=1, inplace=True)
         if index_table.dtypes['date'] == 'datetime64[ns]':
             index_table['date'] = index_table['date'].dt.strftime('%Y-%m-%d')
+        index_table = index_table.drop_duplicates(subset=['date', 'ticker']).copy()
         index_table.to_csv(outfile)
         return index_table
 

@@ -19,7 +19,7 @@ load data
 """
 
 ticker_start_date = dt.date(2019,9,16)
-ticker_end_date = dt.date(2022,2,18)
+ticker_end_date = dt.date(2022,4,13)
 
 #df = sf.read_csv_bulk(input_file = r'c:\investment_data\get_data_all_test.csv', file_size = 1000000000,chunk_count = 100000)
 #df = sf.backtestDecisionTree(data=df)
